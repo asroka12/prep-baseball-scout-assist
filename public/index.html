@@ -231,6 +231,57 @@
         .player-input-wrapper {
             position: relative;
         }
+
+        .pill-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pill-btn {
+            padding: 8px 16px;
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 2px solid #bdc3c7;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .pill-btn:hover {
+            background: #d5dbdb;
+        }
+
+        .pill-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+
+        .tab-btn:hover {
+            background: #d5dbdb;
+        }
+
+        .tab-btn.active {
+            background: #2980b9;
+            color: white;
+            border-color: #2980b9;
+        }
     </style>
 </head>
 <body>
@@ -283,6 +334,13 @@
                     <button onclick="syncPendingReports()" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">Sync Now</button>
                 </div>
 
+                <!-- Report Type Switcher -->
+                <div class="section-title">Report Type</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 30px;">
+                    <button type="button" id="showcaseModeBtn" class="tab-btn active" onclick="switchReportMode('showcase')">⚾ Showcase Report</button>
+                    <button type="button" id="gameModeBtn" class="tab-btn" onclick="switchReportMode('game')">🎯 In-Game Report</button>
+                </div>
+
                 <!-- Player Info -->
                 <div class="section-title">Player Information</div>
                 <div class="grid-2">
@@ -316,7 +374,11 @@
                     </div>
                 </div>
 
+                <!-- SHOWCASE MODE FIELDS -->
+                <div id="showcaseFields">
                 <!-- Hitting Grades -->
+                <!-- Hitting Evaluation -->
+                <div id="showcaseFields">
                 <div class="section-title">Hitting Evaluation</div>
                 <div class="grid-3">
                     <div class="form-group">
@@ -416,6 +478,22 @@
                     <label for="scoutNotes">Observations & Notes</label>
                     <textarea id="scoutNotes" placeholder="Write your detailed observations here. This will be converted to content."></textarea>
                 </div>
+                </div>
+                <!-- END SHOWCASE MODE -->
+
+                <!-- GAME MODE FIELDS -->
+                <div id="gameFields" style="display: none;">
+                    <div class="section-title">At-Bats</div>
+                    <div id="atBatsList"></div>
+                    <button type="button" onclick="addAtBat()" style="background: #27ae60; margin-bottom: 20px;">+ Add At-Bat</button>
+                    
+                    <div class="section-title">Game Notes</div>
+                    <div class="form-group">
+                        <label for="gameNotes">Overall Game Observations</label>
+                        <textarea id="gameNotes" placeholder="General notes about the player's performance..."></textarea>
+                    </div>
+                </div>
+                <!-- END GAME MODE -->
 
                 <button onclick="saveReport()">Save Report</button>
             </div>
@@ -443,6 +521,162 @@
     </div>
 
     <script>
+        // Dual-mode report system
+        let currentMode = 'showcase';
+        let atBatsData = [];
+
+        function switchReportMode(mode) {
+            currentMode = mode;
+            
+            // Toggle UI visibility
+            document.getElementById('showcaseFields').style.display = mode === 'showcase' ? 'block' : 'none';
+            document.getElementById('gameFields').style.display = mode === 'game' ? 'block' : 'none';
+            
+            // Toggle button active states
+            document.getElementById('showcaseModeBtn').classList.toggle('active', mode === 'showcase');
+            document.getElementById('gameModeBtn').classList.toggle('active', mode === 'game');
+        }
+
+        function addAtBat() {
+            const index = atBatsData.length;
+            atBatsData.push({
+                inning: '',
+                pitcherHand: '',
+                result: '',
+                contactQuality: '',
+                pitchType: '',
+                veloEst: '',
+                notes: ''
+            });
+
+            const atBatHTML = `
+                <div class="at-bat-block" id="atBat${index}" style="background: #f8f9fa; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="color: #2c3e50;">At-Bat #${index + 1}</strong>
+                        <button type="button" onclick="removeAtBat(${index})" style="background: #e74c3c; padding: 4px 8px; font-size: 12px;">Remove</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Inning</label>
+                        <select onchange="updateAtBat(${index}, 'inning', this.value)">
+                            <option value="">Select...</option>
+                            <option value="1">1st</option>
+                            <option value="2">2nd</option>
+                            <option value="3">3rd</option>
+                            <option value="4">4th</option>
+                            <option value="5">5th</option>
+                            <option value="6">6th</option>
+                            <option value="7">7th</option>
+                            <option value="8">8th</option>
+                            <option value="9">9th</option>
+                            <option value="Extra">Extra</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pitcher Hand</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitcherHand', 'RHP', this)">RHP</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitcherHand', 'LHP', this)">LHP</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Result</label>
+                        <select onchange="updateAtBat(${index}, 'result', this.value)">
+                            <option value="">Select...</option>
+                            <option value="Single">Single</option>
+                            <option value="Double">Double</option>
+                            <option value="Triple">Triple</option>
+                            <option value="HR">Home Run</option>
+                            <option value="Walk">Walk</option>
+                            <option value="K">Strikeout</option>
+                            <option value="GO">Groundout</option>
+                            <option value="FO">Flyout</option>
+                            <option value="LO">Lineout</option>
+                            <option value="PO">Popout</option>
+                            <option value="FC">Fielder's Choice</option>
+                            <option value="E">Reached on Error</option>
+                            <option value="HBP">Hit by Pitch</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contact Quality</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'contactQuality', 'Elite', this)">Elite</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'contactQuality', 'Solid', this)">Solid</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'contactQuality', 'Weak', this)">Weak</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'contactQuality', 'Miss', this)">Miss</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pitch Type</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitchType', 'FB', this)">FB</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitchType', 'CB', this)">CB</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitchType', 'SL', this)">SL</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitchType', 'CH', this)">CH</button>
+                            <button type="button" class="pill-btn" onclick="updateAtBatPill(${index}, 'pitchType', 'CT', this)">CT</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Velo Estimate (mph)</label>
+                        <input type="number" placeholder="e.g., 88" onchange="updateAtBat(${index}, 'veloEst', this.value)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea placeholder="Notes about this at-bat..." onchange="updateAtBat(${index}, 'notes', this.value)"></textarea>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('atBatsList').insertAdjacentHTML('beforeend', atBatHTML);
+        }
+
+        function updateAtBat(index, field, value) {
+            if (atBatsData[index]) {
+                atBatsData[index][field] = value;
+            }
+        }
+
+        function updateAtBatPill(index, field, value, btn) {
+            updateAtBat(index, field, value);
+            
+            // Toggle active state for pills in same group
+            const pillGroup = btn.parentElement;
+            pillGroup.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function removeAtBat(index) {
+            const atBatElement = document.getElementById(`atBat${index}`);
+            if (atBatElement) {
+                atBatElement.remove();
+                atBatsData[index] = null; // Mark as removed
+            }
+        }
+
+        function formatGameReport() {
+            return atBatsData
+                .map((ab, idx) => {
+                    if (!ab) return null; // Skip removed at-bats
+                    return `At-Bat #${idx + 1}:
+Inning: ${ab.inning || 'N/A'}
+Pitcher Hand: ${ab.pitcherHand || 'N/A'}
+Result: ${ab.result || 'N/A'}
+Contact Quality: ${ab.contactQuality || 'N/A'}
+Pitch Type: ${ab.pitchType || 'N/A'}
+Velo Est: ${ab.veloEst ? ab.veloEst + ' mph' : 'N/A'}
+Notes: ${ab.notes || 'None'}`;
+                })
+                .filter(ab => ab !== null)
+                .join('\n\n---\n\n');
+        }
+
         // Player autocomplete setup
         const playerNameInput = document.getElementById('playerName');
         const playerAutocompleteList = document.getElementById('playerAutocomplete');
@@ -547,22 +781,31 @@
             const report = {
                 id: Date.now(),
                 timestamp: new Date().toISOString(),
+                reportType: currentMode,
                 playerName: playerName,
                 playerSchool: document.getElementById('playerSchool').value,
                 eventDate: eventDate,
                 eventName: document.getElementById('eventName').value,
                 scoutName: scoutName,
-                overallGrade: document.getElementById('overallGrade').value,
-                stance: document.getElementById('stance').value,
-                load: document.getElementById('load').value,
-                swingPath: document.getElementById('swingPath').value,
-                barrelFeel: document.getElementById('barrelFeel').value,
-                batSpeed: document.getElementById('batSpeed').value,
-                avgEV: document.getElementById('avgEV').value,
-                maxEV: document.getElementById('maxEV').value,
-                maxDist: document.getElementById('maxDist').value,
-                scoutNotes: document.getElementById('scoutNotes').value
+                overallGrade: document.getElementById('overallGrade').value
             };
+
+            // Add mode-specific fields
+            if (currentMode === 'showcase') {
+                report.stance = document.getElementById('stance').value;
+                report.load = document.getElementById('load').value;
+                report.swingPath = document.getElementById('swingPath').value;
+                report.barrelFeel = document.getElementById('barrelFeel').value;
+                report.batSpeed = document.getElementById('batSpeed').value;
+                report.avgEV = document.getElementById('avgEV').value;
+                report.maxEV = document.getElementById('maxEV').value;
+                report.maxDist = document.getElementById('maxDist').value;
+                report.scoutNotes = document.getElementById('scoutNotes').value;
+            } else {
+                report.atBats = atBatsData;
+                report.formattedAtBats = formatGameReport();
+                report.gameNotes = document.getElementById('gameNotes').value;
+            }
 
             try {
                 const response = await fetch('/api/reports', {
@@ -607,6 +850,8 @@
             document.getElementById('eventName').value = '';
             document.getElementById('scoutName').value = '';
             document.getElementById('overallGrade').value = '';
+            
+            // Clear showcase fields
             document.getElementById('stance').value = '';
             document.getElementById('load').value = '';
             document.getElementById('swingPath').value = '';
@@ -616,6 +861,11 @@
             document.getElementById('maxEV').value = '';
             document.getElementById('maxDist').value = '';
             document.getElementById('scoutNotes').value = '';
+            
+            // Clear game fields
+            document.getElementById('gameNotes').value = '';
+            document.getElementById('atBatsList').innerHTML = '';
+            atBatsData = [];
         }
 
         function updateDraftsUI() {
