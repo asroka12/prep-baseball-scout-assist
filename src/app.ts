@@ -16,7 +16,16 @@ const PORT: number = Number(process.env.PORT) || 3000;
 const ORIGIN = process.env.ORIGIN || '*';
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'"],
+    }
+  }
+}));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(cors({ origin: ORIGIN }));
 app.use(express.json({ limit: '1mb' }));
