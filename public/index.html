@@ -272,6 +272,17 @@
                 <div class="success-message" id="reportSuccess">✓ Report saved successfully!</div>
                 <div class="error-message" id="reportError"></div>
 
+                <!-- Sync Status Indicator -->
+                <div id="syncStatus" style="padding: 15px; background: #e8f4f8; border-left: 4px solid #3498db; border-radius: 4px; margin-bottom: 20px; display: none;">
+                    <span id="syncStatusText">🔄 Syncing draft reports...</span>
+                </div>
+
+                <!-- Draft Reports Warning -->
+                <div id="draftWarning" style="padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin-bottom: 20px; display: none;">
+                    <strong>📱 Offline Mode:</strong> You have <span id="draftCount">0</span> draft reports waiting to sync. They'll upload automatically when you're back online.
+                    <button onclick="syncPendingReports()" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">Sync Now</button>
+                </div>
+
                 <!-- Player Info -->
                 <div class="section-title">Player Information</div>
                 <div class="grid-2">
@@ -408,6 +419,13 @@
 
                 <button onclick="saveReport()">Save Report</button>
             </div>
+
+            <!-- Draft Reports Section -->
+            <div class="form-section" id="draftSection" style="display: none;">
+                <h2 class="section-title">📝 Draft Reports (Offline)</h2>
+                <p style="margin-bottom: 15px; color: #7f8c8d;">These reports are saved locally and will sync when you're online.</p>
+                <div id="draftsList" class="player-list"></div>
+            </div>
         </div>
 
         <!-- View Tab -->
@@ -527,6 +545,8 @@
             }
 
             const report = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
                 playerName: playerName,
                 playerSchool: document.getElementById('playerSchool').value,
                 eventDate: eventDate,
@@ -556,34 +576,161 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showSuccess('reportSuccess', 'Report saved!');
-                    // Clear form
-                    document.querySelector('.tab-content.active form')?.reset();
-                    // Reset all form fields
-                    document.getElementById('playerName').value = '';
-                    document.getElementById('playerSchool').value = '';
-                    document.getElementById('eventDate').value = '';
-                    document.getElementById('eventName').value = '';
-                    document.getElementById('scoutName').value = '';
-                    document.getElementById('overallGrade').value = '';
-                    document.getElementById('stance').value = '';
-                    document.getElementById('load').value = '';
-                    document.getElementById('swingPath').value = '';
-                    document.getElementById('barrelFeel').value = '';
-                    document.getElementById('batSpeed').value = '';
-                    document.getElementById('avgEV').value = '';
-                    document.getElementById('maxEV').value = '';
-                    document.getElementById('maxDist').value = '';
-                    document.getElementById('scoutNotes').value = '';
-                    // Refresh reports list
+                    showSuccess('reportSuccess', 'Report synced to server!');
+                    clearReportForm();
                     loadReports();
                 } else {
-                    showError('reportError', data.message || 'Failed to save report');
+                    // Failed to sync - save as draft
+                    saveReportDraft(report);
+                    showSuccess('reportSuccess', 'Report saved locally. It will sync when online.');
+                    clearReportForm();
                 }
             } catch (error) {
-                showError('reportError', 'Error saving report: ' + error.message);
+                // Network error - save as draft
+                saveReportDraft(report);
+                showSuccess('reportSuccess', '📱 Report saved locally. It will sync when online.');
+                clearReportForm();
             }
         }
+
+        function saveReportDraft(report) {
+            let drafts = JSON.parse(localStorage.getItem('reportDrafts') || '[]');
+            drafts.push(report);
+            localStorage.setItem('reportDrafts', JSON.stringify(drafts));
+            updateDraftsUI();
+        }
+
+        function clearReportForm() {
+            document.getElementById('playerName').value = '';
+            document.getElementById('playerSchool').value = '';
+            document.getElementById('eventDate').value = '';
+            document.getElementById('eventName').value = '';
+            document.getElementById('scoutName').value = '';
+            document.getElementById('overallGrade').value = '';
+            document.getElementById('stance').value = '';
+            document.getElementById('load').value = '';
+            document.getElementById('swingPath').value = '';
+            document.getElementById('barrelFeel').value = '';
+            document.getElementById('batSpeed').value = '';
+            document.getElementById('avgEV').value = '';
+            document.getElementById('maxEV').value = '';
+            document.getElementById('maxDist').value = '';
+            document.getElementById('scoutNotes').value = '';
+        }
+
+        function updateDraftsUI() {
+            const drafts = JSON.parse(localStorage.getItem('reportDrafts') || '[]');
+            const draftWarning = document.getElementById('draftWarning');
+            const draftSection = document.getElementById('draftSection');
+            const draftsList = document.getElementById('draftsList');
+            const draftCount = document.getElementById('draftCount');
+
+            if (drafts.length > 0) {
+                draftWarning.style.display = 'block';
+                draftSection.style.display = 'block';
+                draftCount.textContent = drafts.length;
+                
+                draftsList.innerHTML = drafts.map((draft, idx) => `
+                    <div class="player-item">
+                        <div class="player-name">${draft.playerName}</div>
+                        <div class="player-info">
+                            School: ${draft.playerSchool || 'N/A'} • 
+                            Event: ${draft.eventName || 'N/A'} • 
+                            Scout: ${draft.scoutName}
+                        </div>
+                        <div style="font-size: 12px; color: #e74c3c; margin-top: 5px;">
+                            ⏳ Pending sync • Saved ${new Date(draft.timestamp).toLocaleTimeString()}
+                        </div>
+                        <button onclick="removeDraft(${idx})" style="margin-top: 8px; background: #e74c3c; padding: 5px 10px; font-size: 12px;">Delete Draft</button>
+                    </div>
+                `).join('');
+            } else {
+                draftWarning.style.display = 'none';
+                draftSection.style.display = 'none';
+            }
+        }
+
+        function removeDraft(idx) {
+            let drafts = JSON.parse(localStorage.getItem('reportDrafts') || '[]');
+            drafts.splice(idx, 1);
+            localStorage.setItem('reportDrafts', JSON.stringify(drafts));
+            updateDraftsUI();
+            showSuccess('reportSuccess', 'Draft deleted.');
+        }
+
+        async function syncPendingReports() {
+            const drafts = JSON.parse(localStorage.getItem('reportDrafts') || '[]');
+            
+            if (drafts.length === 0) {
+                showSuccess('reportSuccess', 'No pending reports to sync.');
+                return;
+            }
+
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.style.display = 'block';
+            document.getElementById('syncStatusText').textContent = `🔄 Syncing ${drafts.length} draft report(s)...`;
+
+            let synced = 0;
+            const failedDrafts = [];
+
+            for (let i = 0; i < drafts.length; i++) {
+                try {
+                    const response = await fetch('/api/reports', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(drafts[i])
+                    });
+
+                    if (response.ok) {
+                        synced++;
+                    } else {
+                        failedDrafts.push(i);
+                    }
+                } catch (error) {
+                    failedDrafts.push(i);
+                }
+            }
+
+            // Remove synced drafts
+            const updatedDrafts = drafts.filter((_, idx) => failedDrafts.includes(idx));
+            localStorage.setItem('reportDrafts', JSON.stringify(updatedDrafts));
+            
+            updateDraftsUI();
+
+            if (synced > 0) {
+                document.getElementById('syncStatusText').textContent = `✓ Successfully synced ${synced} report(s)!`;
+                setTimeout(() => { syncStatus.style.display = 'none'; }, 3000);
+                loadReports();
+            }
+
+            if (failedDrafts.length > 0) {
+                showError('reportError', `Failed to sync ${failedDrafts.length} report(s). Will retry when online.`);
+            }
+        }
+
+        // Auto-sync drafts when connection is restored
+        window.addEventListener('online', () => {
+            console.log('Connection restored, syncing pending reports...');
+            syncPendingReports();
+        });
+
+        // Check drafts on page load and periodically
+        window.addEventListener('load', () => {
+            loadEvents();
+            loadReports();
+            updateDraftsUI();
+            // Try to sync every 30 seconds if online
+            setInterval(() => {
+                if (navigator.onLine) {
+                    const drafts = JSON.parse(localStorage.getItem('reportDrafts') || '[]');
+                    if (drafts.length > 0) {
+                        syncPendingReports();
+                    }
+                }
+            }, 30000);
+        });
 
         function showSuccess(elementId, message) {
             const el = document.getElementById(elementId);
@@ -597,12 +744,6 @@
             el.textContent = message;
             el.style.display = 'block';
         }
-
-        // Load reports on page load
-        window.addEventListener('load', () => {
-            loadEvents();
-            loadReports();
-        });
 
         async function loadEvents() {
             try {
