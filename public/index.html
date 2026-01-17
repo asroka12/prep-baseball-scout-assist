@@ -282,6 +282,134 @@
             color: white;
             border-color: #2980b9;
         }
+
+        /* Game Dashboard Styles */
+        .roster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .player-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .player-card:hover {
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .player-card-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .player-card-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+
+        .player-card-stats {
+            font-size: 13px;
+            font-weight: 600;
+            color: #27ae60;
+            padding: 6px 10px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .player-card-stats.no-activity {
+            color: #95a5a6;
+            background: #ecf0f1;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: #3498db;
+            color: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            line-height: 28px;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .at-bat-history {
+            margin-bottom: 20px;
+        }
+
+        .at-bat-history-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #3498db;
+        }
+
+        .at-bat-history-item strong {
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -480,16 +608,36 @@
                 </div>
                 <!-- END SHOWCASE MODE -->
 
-                <!-- GAME MODE FIELDS -->
+                <!-- GAME MODE DASHBOARD -->
                 <div id="gameFields" style="display: none;">
-                    <div class="section-title">At-Bats</div>
-                    <div id="atBatsList"></div>
-                    <button type="button" onclick="addAtBat()" style="background: #27ae60; margin-bottom: 20px;">+ Add At-Bat</button>
-                    
-                    <div class="section-title">Game Notes</div>
-                    <div class="form-group">
-                        <label for="gameNotes">Overall Game Observations</label>
-                        <textarea id="gameNotes" placeholder="General notes about the player's performance..."></textarea>
+                    <!-- Game Setup -->
+                    <div class="section-title">🎯 Live Game Dashboard</div>
+                    <div id="gameSetupSection">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Current Event</label>
+                                <input type="text" id="dashboardEventName" placeholder="e.g., vs. Burlington" />
+                            </div>
+                            <div class="form-group">
+                                <label>Scout Name</label>
+                                <input type="text" id="dashboardScoutName" placeholder="Your name" />
+                            </div>
+                        </div>
+                        <button type="button" onclick="startGameDashboard()" style="background: #27ae60; margin-bottom: 20px;">📋 Load Roster & Start Game</button>
+                    </div>
+
+                    <!-- Active Game View -->
+                    <div id="activeDashboard" style="display: none;">
+                        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+                            <strong id="gameEventTitle" style="color: #2c3e50;"></strong>
+                            <div style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
+                                Scout: <span id="gameScoutName"></span> • 
+                                <span id="gamePlayerCount">0</span> players loaded
+                            </div>
+                        </div>
+
+                        <div class="section-title">Team Roster</div>
+                        <div id="rosterList" class="roster-grid"></div>
                     </div>
                 </div>
                 <!-- END GAME MODE -->
@@ -534,6 +682,265 @@
             // Toggle button active states
             document.getElementById('showcaseModeBtn').classList.toggle('active', mode === 'showcase');
             document.getElementById('gameModeBtn').classList.toggle('active', mode === 'game');
+        }
+
+        // Game Dashboard State
+        let currentGameData = {
+            eventName: '',
+            scoutName: '',
+            eventDate: '',
+            playerAtBats: {} // playerId: [atBat1, atBat2, ...]
+        };
+        let currentModalPlayer = null;
+        let modalAtBatData = {
+            inning: '',
+            pitcherHand: '',
+            result: '',
+            contactQuality: '',
+            pitchType: '',
+            veloEst: '',
+            notes: ''
+        };
+
+        async function startGameDashboard() {
+            const eventName = document.getElementById('dashboardEventName').value;
+            const scoutName = document.getElementById('dashboardScoutName').value;
+
+            if (!eventName || !scoutName) {
+                showError('reportError', 'Please enter Event Name and Scout Name');
+                return;
+            }
+
+            currentGameData.eventName = eventName;
+            currentGameData.scoutName = scoutName;
+            currentGameData.eventDate = new Date().toISOString().split('T')[0];
+
+            // Load roster from database
+            try {
+                const response = await fetch('/api/players');
+                const players = await response.json();
+
+                if (players.length === 0) {
+                    showError('reportError', 'No players found. Upload a roster first!');
+                    return;
+                }
+
+                // Load existing game data if any
+                await loadExistingGameData(eventName);
+
+                // Display dashboard
+                document.getElementById('gameSetupSection').style.display = 'none';
+                document.getElementById('activeDashboard').style.display = 'block';
+                document.getElementById('gameEventTitle').textContent = eventName;
+                document.getElementById('gameScoutName').textContent = scoutName;
+                document.getElementById('gamePlayerCount').textContent = players.length;
+
+                renderRosterList(players);
+            } catch (error) {
+                showError('reportError', 'Failed to load roster: ' + error.message);
+            }
+        }
+
+        async function loadExistingGameData(eventName) {
+            try {
+                const response = await fetch(`/api/reports/event/${encodeURIComponent(eventName)}`);
+                let reports = await response.json();
+
+                // Parse at-bats for each player
+                reports.forEach(r => {
+                    if (r.atBatsJson && typeof r.atBatsJson === 'string') {
+                        try {
+                            const atBats = JSON.parse(r.atBatsJson);
+                            if (!currentGameData.playerAtBats[r.playerName]) {
+                                currentGameData.playerAtBats[r.playerName] = [];
+                            }
+                            currentGameData.playerAtBats[r.playerName].push(...atBats.filter(Boolean));
+                        } catch (e) {}
+                    }
+                });
+            } catch (error) {
+                console.log('No existing game data found, starting fresh');
+            }
+        }
+
+        function renderRosterList(players) {
+            const rosterList = document.getElementById('rosterList');
+            rosterList.innerHTML = players.map(p => {
+                const playerName = `${p.firstName} ${p.lastName}`;
+                const stats = calculatePlayerStats(playerName);
+                
+                return `
+                    <div class="player-card" onclick="openPlayerModal('${playerName}', '${p.school || 'N/A'}', '${p.position || 'N/A'}')">
+                        <div class="player-card-name">${playerName}</div>
+                        <div class="player-card-info">${p.school || 'Unknown'} • ${p.position || 'Position N/A'}</div>
+                        <div class="player-card-stats ${stats.summary ? '' : 'no-activity'}">
+                            ${stats.summary || 'No at-bats yet'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculatePlayerStats(playerName) {
+            const atBats = currentGameData.playerAtBats[playerName] || [];
+            if (atBats.length === 0) {
+                return { summary: null, hits: 0, abs: 0, avg: '.000' };
+            }
+
+            const hits = atBats.filter(ab => ['1B', '2B', '3B', 'HR'].includes(ab.result)).length;
+            const officialABs = atBats.filter(ab => !['BB', 'HBP'].includes(ab.result)).length;
+            const avg = officialABs > 0 ? (hits / officialABs).toFixed(3) : '.000';
+            const lastResult = atBats[atBats.length - 1]?.result || '';
+
+            return {
+                summary: `${hits}-for-${officialABs} (${avg})${lastResult ? ' • ' + lastResult : ''}`,
+                hits,
+                abs: officialABs,
+                avg
+            };
+        }
+
+        function openPlayerModal(playerName, school, position) {
+            currentModalPlayer = playerName;
+            
+            document.getElementById('modalPlayerName').textContent = playerName;
+            document.getElementById('modalPlayerInfo').textContent = `${school} • ${position}`;
+            
+            // Show existing at-bats
+            const atBats = currentGameData.playerAtBats[playerName] || [];
+            if (atBats.length > 0) {
+                document.getElementById('atBatHistory').style.display = 'block';
+                document.getElementById('atBatHistoryList').innerHTML = atBats.map((ab, idx) => `
+                    <div class="at-bat-history-item">
+                        <strong>AB #${idx + 1}:</strong> Inning ${ab.inning} • ${ab.result || 'N/A'} • ${ab.contactQuality || 'N/A'} contact
+                        ${ab.notes ? '<br><span style="font-size: 12px; color: #7f8c8d;">' + ab.notes + '</span>' : ''}
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('atBatHistory').style.display = 'none';
+            }
+
+            // Clear form
+            clearModalForm();
+            
+            // Show modal
+            document.getElementById('atBatModal').classList.add('active');
+        }
+
+        function closeAtBatModal() {
+            document.getElementById('atBatModal').classList.remove('active');
+            currentModalPlayer = null;
+        }
+
+        function clearModalForm() {
+            document.getElementById('modalInning').value = '';
+            document.getElementById('modalResult').value = '';
+            document.getElementById('modalVelo').value = '';
+            document.getElementById('modalNotes').value = '';
+            
+            // Clear pill selections
+            document.querySelectorAll('#atBatModal .pill-btn').forEach(btn => btn.classList.remove('active'));
+            
+            modalAtBatData = {
+                inning: '',
+                pitcherHand: '',
+                result: '',
+                contactQuality: '',
+                pitchType: '',
+                veloEst: '',
+                notes: ''
+            };
+        }
+
+        // Handle pill button clicks in modal
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('pill-btn') && e.target.dataset.field) {
+                const field = e.target.dataset.field;
+                const value = e.target.dataset.value;
+                
+                // Clear other pills in same group
+                const pillGroup = e.target.parentElement;
+                pillGroup.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Update modal data
+                modalAtBatData[field] = value;
+            }
+        });
+
+        async function saveAtBat() {
+            if (!currentModalPlayer) return;
+
+            // Gather form data
+            modalAtBatData.inning = document.getElementById('modalInning').value;
+            modalAtBatData.result = document.getElementById('modalResult').value;
+            modalAtBatData.veloEst = document.getElementById('modalVelo').value;
+            modalAtBatData.notes = document.getElementById('modalNotes').value;
+
+            if (!modalAtBatData.inning || !modalAtBatData.result) {
+                showError('reportError', 'Please fill in Inning and Result');
+                return;
+            }
+
+            // Add to player's at-bats
+            if (!currentGameData.playerAtBats[currentModalPlayer]) {
+                currentGameData.playerAtBats[currentModalPlayer] = [];
+            }
+            currentGameData.playerAtBats[currentModalPlayer].push({...modalAtBatData});
+
+            // Save to backend
+            await saveGameDataToBackend(currentModalPlayer);
+
+            // Reload roster to show updated stats
+            const response = await fetch('/api/players');
+            const players = await response.json();
+            renderRosterList(players);
+
+            // Close modal
+            closeAtBatModal();
+            showSuccess('reportSuccess', `At-bat saved for ${currentModalPlayer}!`);
+        }
+
+        async function saveGameDataToBackend(playerName) {
+            const report = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                reportType: 'game',
+                playerName: playerName,
+                playerSchool: '', // Could extract from roster if needed
+                eventDate: currentGameData.eventDate,
+                eventName: currentGameData.eventName,
+                scoutName: currentGameData.scoutName,
+                overallGrade: null,
+                atBats: currentGameData.playerAtBats[playerName],
+                formattedAtBats: formatAtBats(currentGameData.playerAtBats[playerName]),
+                gameNotes: ''
+            };
+
+            try {
+                const response = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(report)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                console.error('Save failed, will retry:', error);
+            }
+        }
+
+        function formatAtBats(atBats) {
+            return atBats.map((ab, idx) => `At-Bat #${idx + 1}:
+Inning: ${ab.inning || 'N/A'}
+Pitcher Hand: ${ab.pitcherHand || 'N/A'}
+Result: ${ab.result || 'N/A'}
+Contact Quality: ${ab.contactQuality || 'N/A'}
+Pitch Type: ${ab.pitchType || 'N/A'}
+Velo Est: ${ab.veloEst ? ab.veloEst + ' mph' : 'N/A'}
+Notes: ${ab.notes || 'None'}`).join('\n\n---\n\n');
         }
 
         function addAtBat() {
@@ -1119,5 +1526,107 @@ Notes: ${ab.notes || 'None'}`;
             console.log('✓ App installed to home screen');
         });
     </script>
+
+    <!-- At-Bat Quick-Add Modal -->
+    <div id="atBatModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalPlayerName"></h3>
+                    <div style="font-size: 13px; opacity: 0.9;" id="modalPlayerInfo"></div>
+                </div>
+                <button class="modal-close" onclick="closeAtBatModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Existing At-Bats -->
+                <div id="atBatHistory" class="at-bat-history" style="display: none;">
+                    <strong style="display: block; margin-bottom: 10px;">Previous At-Bats:</strong>
+                    <div id="atBatHistoryList"></div>
+                </div>
+
+                <!-- Add New At-Bat Form -->
+                <div class="section-title" style="margin-top: 0;">Add At-Bat</div>
+                
+                <div class="form-group">
+                    <label>Inning</label>
+                    <select id="modalInning">
+                        <option value="">Select...</option>
+                        <option value="1">1st</option>
+                        <option value="2">2nd</option>
+                        <option value="3">3rd</option>
+                        <option value="4">4th</option>
+                        <option value="5">5th</option>
+                        <option value="6">6th</option>
+                        <option value="7">7th</option>
+                        <option value="8">8th</option>
+                        <option value="9">9th</option>
+                        <option value="Extra">Extra</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Pitcher Hand</label>
+                    <div class="pill-group">
+                        <button type="button" class="pill-btn" data-field="pitcherHand" data-value="RHP">RHP</button>
+                        <button type="button" class="pill-btn" data-field="pitcherHand" data-value="LHP">LHP</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Result</label>
+                    <select id="modalResult">
+                        <option value="">Select...</option>
+                        <option value="1B">Single</option>
+                        <option value="2B">Double</option>
+                        <option value="3B">Triple</option>
+                        <option value="HR">Home Run</option>
+                        <option value="BB">Walk</option>
+                        <option value="K">Strikeout</option>
+                        <option value="GO">Groundout</option>
+                        <option value="FO">Flyout</option>
+                        <option value="LO">Lineout</option>
+                        <option value="PO">Popout</option>
+                        <option value="FC">Fielder's Choice</option>
+                        <option value="E">Reached on Error</option>
+                        <option value="HBP">Hit by Pitch</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Contact Quality</label>
+                    <div class="pill-group">
+                        <button type="button" class="pill-btn" data-field="contactQuality" data-value="Elite">Elite</button>
+                        <button type="button" class="pill-btn" data-field="contactQuality" data-value="Solid">Solid</button>
+                        <button type="button" class="pill-btn" data-field="contactQuality" data-value="Weak">Weak</button>
+                        <button type="button" class="pill-btn" data-field="contactQuality" data-value="Miss">Miss</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Pitch Type</label>
+                    <div class="pill-group">
+                        <button type="button" class="pill-btn" data-field="pitchType" data-value="FB">FB</button>
+                        <button type="button" class="pill-btn" data-field="pitchType" data-value="CB">CB</button>
+                        <button type="button" class="pill-btn" data-field="pitchType" data-value="SL">SL</button>
+                        <button type="button" class="pill-btn" data-field="pitchType" data-value="CH">CH</button>
+                        <button type="button" class="pill-btn" data-field="pitchType" data-value="CT">CT</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Velo Estimate (mph)</label>
+                    <input type="number" id="modalVelo" placeholder="e.g., 88" />
+                </div>
+
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="modalNotes" placeholder="Notes about this at-bat..."></textarea>
+                </div>
+
+                <button onclick="saveAtBat()" style="width: 100%; background: #27ae60; padding: 12px;">💾 Save At-Bat</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

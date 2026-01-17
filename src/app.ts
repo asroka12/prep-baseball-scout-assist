@@ -166,6 +166,16 @@ app.get('/api/events', (req: Request, res: Response) => {
   );
 });
 
+// Get all players
+app.get('/api/players', (req: Request, res: Response) => {
+  db.all('SELECT * FROM players ORDER BY lastName, firstName', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to fetch players' });
+    }
+    res.json(rows || []);
+  });
+});
+
 // Search players
 app.get('/api/players/search', (req: Request, res: Response) => {
   const query = req.query.q as string;
