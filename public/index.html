@@ -613,16 +613,41 @@
                     <!-- Game Setup -->
                     <div class="section-title">🎯 Live Game Dashboard</div>
                     <div id="gameSetupSection">
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label>Current Event</label>
-                                <input type="text" id="dashboardEventName" placeholder="e.g., vs. Burlington" />
-                            </div>
+                        <div class="grid-3">
                             <div class="form-group">
                                 <label>Scout Name</label>
                                 <input type="text" id="dashboardScoutName" placeholder="Your name" />
                             </div>
+                            <div class="form-group">
+                                <label>Game Date</label>
+                                <input type="date" id="dashboardEventDate" />
+                            </div>
+                            <div class="form-group">
+                                <label>Grad Year Filter (optional)</label>
+                                <select id="dashboardGradYear">
+                                    <option value="">All</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
+                                </select>
+                            </div>
                         </div>
+
+                        <div class="grid-2" style="margin-top: 10px;">
+                            <div class="form-group">
+                                <label>Select Team 1</label>
+                                <select id="teamSelectA">
+                                    <option value="">Loading teams...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Select Team 2</label>
+                                <select id="teamSelectB">
+                                    <option value="">Loading teams...</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <button type="button" onclick="startGameDashboard()" style="background: #27ae60; margin-bottom: 20px;">📋 Load Roster & Start Game</button>
                     </div>
 
@@ -637,7 +662,12 @@
                         </div>
 
                         <div class="section-title">Team Roster</div>
-                        <div id="rosterList" class="roster-grid"></div>
+                        <div id="rosterList">
+                            <h3 id="teamHeaderA" style="margin: 10px 0; color: #2c3e50;"></h3>
+                            <div id="rosterGridA" class="roster-grid"></div>
+                            <h3 id="teamHeaderB" style="margin: 20px 0 10px; color: #2c3e50;"></h3>
+                            <div id="rosterGridB" class="roster-grid"></div>
+                        </div>
                     </div>
                 </div>
                 <!-- END GAME MODE -->
@@ -682,6 +712,10 @@
             // Toggle button active states
             document.getElementById('showcaseModeBtn').classList.toggle('active', mode === 'showcase');
             document.getElementById('gameModeBtn').classList.toggle('active', mode === 'game');
+
+            if (mode === 'game') {
+                initGameSetupUI();
+            }
         }
 
         // Game Dashboard State
@@ -689,8 +723,44 @@
             eventName: '',
             scoutName: '',
             eventDate: '',
-            playerAtBats: {} // playerId: [atBat1, atBat2, ...]
+            playerAtBats: {}, // playerName: [atBat...]
+            allPlayers: [],
+            teams: []
         };
+                async function initGameSetupUI() {
+                    // Prefill scout name from localStorage
+                    const savedScout = localStorage.getItem('scoutName');
+                    if (savedScout) {
+                        document.getElementById('dashboardScoutName').value = savedScout;
+                    }
+                    // Prefill date to today
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('dashboardEventDate').value = today;
+
+                    // Load players and build unique team list
+                    try {
+                        const response = await fetch('/api/players');
+                        const players = await response.json();
+                        currentGameData.allPlayers = players;
+
+                        const teamSet = new Set((players || []).map(p => (p.school || '').trim()).filter(Boolean));
+                        currentGameData.teams = Array.from(teamSet).sort();
+
+                        populateTeamSelectors(currentGameData.teams);
+                    } catch (e) {
+                        showError('reportError', 'Failed to load teams');
+                    }
+                }
+
+                function populateTeamSelectors(teams) {
+                    const teamSelectA = document.getElementById('teamSelectA');
+                    const teamSelectB = document.getElementById('teamSelectB');
+                    const options = ['<option value="">Select team...</option>'].concat(
+                        teams.map(t => `<option value="${t}">${t}</option>`)
+                    ).join('');
+                    teamSelectA.innerHTML = options;
+                    teamSelectB.innerHTML = options;
+                }
         let currentModalPlayer = null;
         let modalAtBatData = {
             inning: '',
@@ -703,39 +773,52 @@
         };
 
         async function startGameDashboard() {
-            const eventName = document.getElementById('dashboardEventName').value;
-            const scoutName = document.getElementById('dashboardScoutName').value;
+            const scoutName = document.getElementById('dashboardScoutName').value.trim();
+            const eventDate = document.getElementById('dashboardEventDate').value;
+            const gradYear = document.getElementById('dashboardGradYear').value;
+            const teamA = document.getElementById('teamSelectA').value;
+            const teamB = document.getElementById('teamSelectB').value;
 
-            if (!eventName || !scoutName) {
-                showError('reportError', 'Please enter Event Name and Scout Name');
+            if (!scoutName || !eventDate || !teamA || !teamB) {
+                showError('reportError', 'Please fill Scout Name, Date, and both teams');
                 return;
             }
 
+            localStorage.setItem('scoutName', scoutName);
+
+            // Auto-generate event name: TeamA vs TeamB (Date)
+            const prettyDate = new Date(eventDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const eventName = `${teamA} vs ${teamB} (${prettyDate})`;
+
             currentGameData.eventName = eventName;
             currentGameData.scoutName = scoutName;
-            currentGameData.eventDate = new Date().toISOString().split('T')[0];
+            currentGameData.eventDate = eventDate;
 
-            // Load roster from database
             try {
-                const response = await fetch('/api/players');
-                const players = await response.json();
-
+                const players = currentGameData.allPlayers || [];
                 if (players.length === 0) {
                     showError('reportError', 'No players found. Upload a roster first!');
                     return;
                 }
 
-                // Load existing game data if any
+                // Filter players by selected teams and optional grad year
+                const filteredA = players.filter(p => (p.school || '') === teamA && (!gradYear || (p.gradYear || '') === gradYear));
+                const filteredB = players.filter(p => (p.school || '') === teamB && (!gradYear || (p.gradYear || '') === gradYear));
+
+                // Load existing game data
                 await loadExistingGameData(eventName);
 
-                // Display dashboard
+                // Display dashboard grouped by team
                 document.getElementById('gameSetupSection').style.display = 'none';
                 document.getElementById('activeDashboard').style.display = 'block';
                 document.getElementById('gameEventTitle').textContent = eventName;
                 document.getElementById('gameScoutName').textContent = scoutName;
-                document.getElementById('gamePlayerCount').textContent = players.length;
+                document.getElementById('gamePlayerCount').textContent = filteredA.length + filteredB.length;
+                document.getElementById('teamHeaderA').textContent = teamA;
+                document.getElementById('teamHeaderB').textContent = teamB;
 
-                renderRosterList(players);
+                renderRosterListGroup(filteredA, 'A');
+                renderRosterListGroup(filteredB, 'B');
             } catch (error) {
                 showError('reportError', 'Failed to load roster: ' + error.message);
             }
@@ -763,9 +846,10 @@
             }
         }
 
-        function renderRosterList(players) {
-            const rosterList = document.getElementById('rosterList');
-            rosterList.innerHTML = players.map(p => {
+        function renderRosterListGroup(players, group) {
+            const gridId = group === 'A' ? 'rosterGridA' : 'rosterGridB';
+            const rosterGrid = document.getElementById(gridId);
+            rosterGrid.innerHTML = players.map(p => {
                 const playerName = `${p.firstName} ${p.lastName}`;
                 const stats = calculatePlayerStats(playerName);
                 
@@ -907,7 +991,7 @@
                 timestamp: new Date().toISOString(),
                 reportType: 'game',
                 playerName: playerName,
-                playerSchool: '', // Could extract from roster if needed
+                playerSchool: inferPlayerSchool(playerName),
                 eventDate: currentGameData.eventDate,
                 eventName: currentGameData.eventName,
                 scoutName: currentGameData.scoutName,
@@ -930,6 +1014,11 @@
             } catch (error) {
                 console.error('Save failed, will retry:', error);
             }
+        }
+
+        function inferPlayerSchool(playerName) {
+            const p = (currentGameData.allPlayers || []).find(pl => `${pl.firstName} ${pl.lastName}` === playerName);
+            return p ? (p.school || '') : '';
         }
 
         function formatAtBats(atBats) {
