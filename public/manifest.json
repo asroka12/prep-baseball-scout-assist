@@ -1,0 +1,51 @@
+{
+  "name": "Prep Baseball Scout App",
+  "short_name": "Scout App",
+  "description": "Real-time scouting reports for prep baseball tournaments",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231e3a8a' width='192' height='192'/><text x='96' y='120' font-size='80' fill='white' text-anchor='middle' font-weight='bold'>⚾</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%231e3a8a' width='512' height='512'/><text x='256' y='380' font-size='300' fill='white' text-anchor='middle' font-weight='bold'>⚾</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f0f9ff' width='540' height='720'/><text x='270' y='360' font-size='48' fill='%231e3a8a' text-anchor='middle' font-weight='bold'>Scout App</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["sports", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Create Report",
+      "short_name": "Report",
+      "description": "Create a new scouting report",
+      "url": "/?tab=report",
+      "icons": []
+    },
+    {
+      "name": "Upload Roster",
+      "short_name": "Upload",
+      "description": "Upload player roster",
+      "url": "/?tab=upload",
+      "icons": []
+    }
+  ]
+}

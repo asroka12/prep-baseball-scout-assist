@@ -1,0 +1,10 @@
+node_modules/
+dist/
+scout.db
+.env
+.env.local
+.env.*.local
+*.log
+uploads/
+.DS_Store
+credentials.json

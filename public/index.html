@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="description" content="Real-time scouting reports for prep baseball tournaments">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Scout App">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231e3a8a' width='180' height='180'/><text x='90' y='130' font-size='100' fill='white' text-anchor='middle' font-weight='bold'>⚾</text></svg>">
+    <title>Prep Baseball Scout App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .tab-btn.active {
+            background: #2980b9;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="file"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #229954;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 30px 0 20px 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .player-list {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .player-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            hover-effect: background #f9f9f9;
+        }
+
+        .player-item:hover {
+            background: #f9f9f9;
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .player-info {
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 100;
+            display: none;
+        }
+
+        .autocomplete-list.active {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .autocomplete-item:hover {
+            background: #f5f5f5;
+        }
+
+        .autocomplete-item-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .autocomplete-item-info {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .player-input-wrapper {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚾ Prep Baseball Scout App</h1>
+            <p>Real-time scouting notes and game data capture</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('upload')">Upload Roster</button>
+            <button class="tab-btn" onclick="switchTab('scout')">Create Report</button>
+            <button class="tab-btn" onclick="switchTab('view')">View Reports</button>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="upload" class="tab-content active">
+            <div class="form-section">
+                <h2 class="section-title">Upload Team Roster</h2>
+                <p style="margin-bottom: 20px; color: #7f8c8d;">Upload a CSV file with player information. The app will extract player names and data for scouting.</p>
+                
+                <div class="success-message" id="uploadSuccess">✓ Roster uploaded successfully!</div>
+                <div class="error-message" id="uploadError"></div>
+
+                <div class="form-group">
+                    <label for="csvFile">Select CSV File</label>
+                    <input type="file" id="csvFile" accept=".csv" />
+                </div>
+
+                <button onclick="uploadCSV()">Upload Roster</button>
+            </div>
+        </div>
+
+        <!-- Scout Tab -->
+        <div id="scout" class="tab-content">
+            <div class="form-section">
+                <h2 class="section-title">Create Scouting Report</h2>
+                
+                <div class="success-message" id="reportSuccess">✓ Report saved successfully!</div>
+                <div class="error-message" id="reportError"></div>
+
+                <!-- Player Info -->
+                <div class="section-title">Player Information</div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="playerName">Player Name *</label>
+                        <div class="player-input-wrapper">
+                            <input type="text" id="playerName" placeholder="Start typing player name..." autocomplete="off" />
+                            <div id="playerAutocomplete" class="autocomplete-list"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="playerSchool">School</label>
+                        <input type="text" id="playerSchool" placeholder="High school name" />
+                    </div>
+                </div>
+
+                <!-- Event Info -->
+                <div class="section-title">Event Information</div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="eventDate">Event Date *</label>
+                        <input type="text" id="eventDate" placeholder="e.g., 2026-01-16" />
+                    </div>
+                    <div class="form-group">
+                        <label for="eventName">Event Name</label>
+                        <input type="text" id="eventName" placeholder="e.g., Winter Showcase" />
+                    </div>
+                    <div class="form-group">
+                        <label for="scoutName">Scout Name *</label>
+                        <input type="text" id="scoutName" placeholder="Your name" />
+                    </div>
+                </div>
+
+                <!-- Hitting Grades -->
+                <div class="section-title">Hitting Evaluation</div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="overallGrade">Overall Grade (1-10) *</label>
+                        <select id="overallGrade">
+                            <option value="">Select grade...</option>
+                            <option value="10">10 - Elite/80</option>
+                            <option value="9">9 - Draft/Early DI Impact</option>
+                            <option value="8">8 - DI Competitive</option>
+                            <option value="7">7 - College Capable</option>
+                            <option value="6.5">6.5 - Tweener/Above Avg HS</option>
+                            <option value="6">6 - Tweener/Above Avg HS</option>
+                            <option value="5">5 - Avg HS Starter</option>
+                            <option value="4">4 - Below Avg HS</option>
+                            <option value="3">3 - JV Level</option>
+                            <option value="2">2 - Non-Competitive</option>
+                            <option value="1">1 - Non-Prospect</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="stance">Setup/Stance</label>
+                        <select id="stance">
+                            <option value="">Select...</option>
+                            <option value="Open">Open</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Even">Even</option>
+                            <option value="Wide Base">Wide Base</option>
+                            <option value="Narrow/Upright">Narrow/Upright</option>
+                            <option value="Crouched">Crouched</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="load">Load/Trigger</label>
+                        <select id="load">
+                            <option value="">Select...</option>
+                            <option value="Leg Kick">Leg Kick</option>
+                            <option value="Toe-Tap">Toe-Tap</option>
+                            <option value="Heel Lift">Heel Lift</option>
+                            <option value="Knee-Knock">Knee-Knock</option>
+                            <option value="Simple/Quiet">Simple/Quiet</option>
+                            <option value="Deep Hand Load">Deep Hand Load</option>
+                            <option value="Arm Bar">Arm Bar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="swingPath">Swing Path</label>
+                        <select id="swingPath">
+                            <option value="">Select...</option>
+                            <option value="Flat/Level">Flat/Level</option>
+                            <option value="Steep/Uphill">Steep/Uphill</option>
+                            <option value="Downhill/Chop">Downhill/Chop</option>
+                            <option value="Short-to-Ball">Short-to-Ball</option>
+                            <option value="Long/Casting">Long/Casting</option>
+                            <option value="Connected">Connected</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="barrelFeel">Barrel Feel</label>
+                        <select id="barrelFeel">
+                            <option value="">Select...</option>
+                            <option value="Whippy">Whippy</option>
+                            <option value="Stiff">Stiff</option>
+                            <option value="Heavy Barrel">Heavy Barrel</option>
+                            <option value="Lag">Lag</option>
+                            <option value="Rotational">Rotational</option>
+                            <option value="Linear">Linear</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="batSpeed">Bat Speed (mph)</label>
+                        <input type="number" id="batSpeed" placeholder="e.g., 65" />
+                    </div>
+                </div>
+
+                <!-- Exit Velo & Metrics -->
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="avgEV">Avg Exit Velo (mph)</label>
+                        <input type="number" id="avgEV" placeholder="e.g., 82" />
+                    </div>
+                    <div class="form-group">
+                        <label for="maxEV">Max Exit Velo (mph)</label>
+                        <input type="number" id="maxEV" placeholder="e.g., 92" />
+                    </div>
+                    <div class="form-group">
+                        <label for="maxDist">Max Distance (ft)</label>
+                        <input type="number" id="maxDist" placeholder="e.g., 385" />
+                    </div>
+                </div>
+
+                <!-- General Notes -->
+                <div class="section-title">Scout Notes</div>
+                <div class="form-group">
+                    <label for="scoutNotes">Observations & Notes</label>
+                    <textarea id="scoutNotes" placeholder="Write your detailed observations here. This will be converted to content."></textarea>
+                </div>
+
+                <button onclick="saveReport()">Save Report</button>
+            </div>
+        </div>
+
+        <!-- View Tab -->
+        <div id="view" class="tab-content">
+            <div class="form-section">
+                <h2 class="section-title">Saved Reports by Event</h2>
+                <div id="eventsList" class="player-list">
+                    <p style="padding: 20px; color: #7f8c8d;">No reports yet. Create one first!</p>
+                </div>
+                <div id="reportsList" class="player-list" style="margin-top: 20px;">
+                    <p style="padding: 20px; color: #7f8c8d;">Select an event to view reports</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Player autocomplete setup
+        const playerNameInput = document.getElementById('playerName');
+        const playerAutocompleteList = document.getElementById('playerAutocomplete');
+
+        playerNameInput.addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                playerAutocompleteList.classList.remove('active');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/players/search?q=${encodeURIComponent(query)}`);
+                const players = await response.json();
+
+                if (players.length === 0) {
+                    playerAutocompleteList.classList.remove('active');
+                    return;
+                }
+
+                playerAutocompleteList.innerHTML = players.map(p => `
+                    <div class="autocomplete-item" onclick="selectPlayer('${p.firstName} ${p.lastName}', '${p.school}')">
+                        <div class="autocomplete-item-name">${p.firstName} ${p.lastName}</div>
+                        <div class="autocomplete-item-info">${p.school || 'Unknown'} • ${p.position || 'Position N/A'}</div>
+                    </div>
+                `).join('');
+                playerAutocompleteList.classList.add('active');
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        });
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target !== playerNameInput) {
+                playerAutocompleteList.classList.remove('active');
+            }
+        });
+
+        function selectPlayer(name, school) {
+            document.getElementById('playerName').value = name;
+            document.getElementById('playerSchool').value = school;
+            playerAutocompleteList.classList.remove('active');
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showError('uploadError', 'Please select a CSV file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('uploadSuccess', 'Roster uploaded successfully!');
+                    fileInput.value = '';
+                } else {
+                    showError('uploadError', data.message || 'Upload failed');
+                }
+            } catch (error) {
+                showError('uploadError', 'Error uploading file: ' + error.message);
+            }
+        }
+
+        async function saveReport() {
+            const playerName = document.getElementById('playerName').value;
+            const scoutName = document.getElementById('scoutName').value;
+            const eventDate = document.getElementById('eventDate').value;
+
+            if (!playerName || !scoutName || !eventDate) {
+                showError('reportError', 'Please fill in required fields (*)');
+                return;
+            }
+
+            const report = {
+                playerName: playerName,
+                playerSchool: document.getElementById('playerSchool').value,
+                eventDate: eventDate,
+                eventName: document.getElementById('eventName').value,
+                scoutName: scoutName,
+                overallGrade: document.getElementById('overallGrade').value,
+                stance: document.getElementById('stance').value,
+                load: document.getElementById('load').value,
+                swingPath: document.getElementById('swingPath').value,
+                barrelFeel: document.getElementById('barrelFeel').value,
+                batSpeed: document.getElementById('batSpeed').value,
+                avgEV: document.getElementById('avgEV').value,
+                maxEV: document.getElementById('maxEV').value,
+                maxDist: document.getElementById('maxDist').value,
+                scoutNotes: document.getElementById('scoutNotes').value
+            };
+
+            try {
+                const response = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(report)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('reportSuccess', 'Report saved!');
+                    // Clear form
+                    document.querySelector('.tab-content.active form')?.reset();
+                    // Reset all form fields
+                    document.getElementById('playerName').value = '';
+                    document.getElementById('playerSchool').value = '';
+                    document.getElementById('eventDate').value = '';
+                    document.getElementById('eventName').value = '';
+                    document.getElementById('scoutName').value = '';
+                    document.getElementById('overallGrade').value = '';
+                    document.getElementById('stance').value = '';
+                    document.getElementById('load').value = '';
+                    document.getElementById('swingPath').value = '';
+                    document.getElementById('barrelFeel').value = '';
+                    document.getElementById('batSpeed').value = '';
+                    document.getElementById('avgEV').value = '';
+                    document.getElementById('maxEV').value = '';
+                    document.getElementById('maxDist').value = '';
+                    document.getElementById('scoutNotes').value = '';
+                    // Refresh reports list
+                    loadReports();
+                } else {
+                    showError('reportError', data.message || 'Failed to save report');
+                }
+            } catch (error) {
+                showError('reportError', 'Error saving report: ' + error.message);
+            }
+        }
+
+        function showSuccess(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = '✓ ' + message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        function showError(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        // Load reports on page load
+        window.addEventListener('load', () => {
+            loadEvents();
+            loadReports();
+        });
+
+        async function loadEvents() {
+            try {
+                const response = await fetch('/api/events');
+                const events = await response.json();
+                
+                const eventsList = document.getElementById('eventsList');
+                if (events.length === 0) {
+                    eventsList.innerHTML = '<p style="padding: 20px; color: #7f8c8d;">No events yet. Create a report first!</p>';
+                } else {
+                    eventsList.innerHTML = events.map(e => `
+                        <div class="player-item" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div onclick="loadEventReports('${e.eventName}', '${e.eventDate}')" style="cursor: pointer; flex: 1;">
+                                <div class="player-name">${e.eventName}</div>
+                                <div class="player-info">${e.eventDate}</div>
+                            </div>
+                            <button onclick="exportToGoogleDocs('${e.eventName}', '${e.eventDate}')" style="margin: 0; padding: 8px 16px; font-size: 13px;">Export to Docs</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading events:', error);
+            }
+        }
+
+        async function loadEventReports(eventName, eventDate) {
+            try {
+                const response = await fetch(`/api/reports/event/${encodeURIComponent(eventName)}`);
+                const reports = await response.json();
+                
+                const reportsList = document.getElementById('reportsList');
+                if (reports.length === 0) {
+                    reportsList.innerHTML = '<p style="padding: 20px; color: #7f8c8d;">No reports for this event.</p>';
+                } else {
+                    reportsList.innerHTML = `<h3 style="padding: 20px 20px 0; color: #2c3e50;">Reports: ${eventName}</h3>` + 
+                        reports.map(r => `
+                        <div class="player-item">
+                            <div class="player-name">${r.playerName}</div>
+                            <div class="player-info">School: ${r.playerSchool || 'N/A'} • Grade: ${r.overallGrade || 'N/A'} • Scout: ${r.scoutName}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+
+        async function exportToGoogleDocs(eventName, eventDate) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Exporting...';
+
+            try {
+                const response = await fetch('/api/export-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        eventName: eventName,
+                        eventDate: eventDate
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Copy to clipboard
+                    await navigator.clipboard.writeText(data.text);
+                    showSuccess('reportSuccess', '✓ Copied to clipboard! Paste into a Google Doc');
+                    
+                    // Open Google Docs in new tab
+                    window.open('https://docs.google.com/document/u/0/create', '_blank');
+                } else {
+                    showError('reportError', data.message || 'Failed to export');
+                }
+            } catch (error) {
+                showError('reportError', 'Error exporting: ' + error.message);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Export to Docs';
+            }
+        }
+
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/reports');
+                const reports = await response.json();
+                
+                // Just load events instead, reports are shown per-event
+                loadEvents();
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').then((reg) => {
+                    console.log('✓ Service Worker registered');
+                }).catch((err) => {
+                    console.log('Service Worker registration failed:', err);
+                });
+            });
+        }
+
+        // Detect when app is installed
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('Install prompt available');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('✓ App installed to home screen');
+        });
+    </script>
+</body>
+</html>
