@@ -104,12 +104,25 @@ app.post('/api/reports', (req: Request, res: Response) => {
     maxEV,
     maxDist,
     scoutNotes,
+    reportType,
+    gameNotes,
+    formattedAtBats,
+    atBats,
   } = req.body;
 
+  const atBatsJson = atBats ? JSON.stringify(atBats) : null;
+
   db.run(
-    `INSERT INTO reports (playerName, playerSchool, eventDate, eventName, scoutName, overallGrade, stance, load, swingPath, barrelFeel, batSpeed, avgEV, maxEV, maxDist, scoutNotes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [playerName, playerSchool, eventDate, eventName, scoutName, overallGrade, stance, load, swingPath, barrelFeel, batSpeed, avgEV, maxEV, maxDist, scoutNotes],
+    `INSERT INTO reports (
+      playerName, playerSchool, eventDate, eventName, scoutName, overallGrade,
+      stance, load, swingPath, barrelFeel, batSpeed, avgEV, maxEV, maxDist, scoutNotes,
+      reportType, gameNotes, formattedAtBats, atBatsJson
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      playerName, playerSchool, eventDate, eventName, scoutName, overallGrade,
+      stance, load, swingPath, barrelFeel, batSpeed, avgEV, maxEV, maxDist, scoutNotes,
+      reportType || 'showcase', gameNotes || null, formattedAtBats || null, atBatsJson
+    ],
     function (err) {
       if (err) {
         return res.status(500).json({ error: 'Failed to create report' });

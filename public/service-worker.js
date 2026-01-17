@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scout-app-v1';
+const CACHE_NAME = 'scout-app-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -58,11 +58,30 @@ self.addEventListener('fetch', (event) => {
         })
     );
   } else {
-    // For static assets, use cache first
-    event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request);
-      })
-    );
+    // For navigations and HTML, use network first to avoid stale UI
+    const isHTMLRequest = event.request.mode === 'navigate' || (event.request.headers.get('accept') || '').includes('text/html');
+
+    if (isHTMLRequest) {
+      event.respondWith(
+        fetch(event.request)
+          .then((response) => {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+            return response;
+          })
+          .catch(() => caches.match(event.request))
+      );
+    } else {
+      // For other static assets, cache-first
+      event.respondWith(
+        caches.match(event.request).then((response) => {
+          return response || fetch(event.request).then((networkResponse) => {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+            return networkResponse;
+          });
+        })
+      );
+    }
   }
 });

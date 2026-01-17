@@ -378,7 +378,6 @@
                 <div id="showcaseFields">
                 <!-- Hitting Grades -->
                 <!-- Hitting Evaluation -->
-                <div id="showcaseFields">
                 <div class="section-title">Hitting Evaluation</div>
                 <div class="grid-3">
                     <div class="form-group">
@@ -1022,7 +1021,14 @@ Notes: ${ab.notes || 'None'}`;
         async function loadEventReports(eventName, eventDate) {
             try {
                 const response = await fetch(`/api/reports/event/${encodeURIComponent(eventName)}`);
-                const reports = await response.json();
+                let reports = await response.json();
+                // Parse at-bats JSON for in-game reports
+                reports = reports.map(r => {
+                    if (r.atBatsJson && typeof r.atBatsJson === 'string') {
+                        try { r.atBats = JSON.parse(r.atBatsJson); } catch { r.atBats = []; }
+                    }
+                    return r;
+                });
                 
                 const reportsList = document.getElementById('reportsList');
                 if (reports.length === 0) {
@@ -1033,6 +1039,9 @@ Notes: ${ab.notes || 'None'}`;
                         <div class="player-item">
                             <div class="player-name">${r.playerName}</div>
                             <div class="player-info">School: ${r.playerSchool || 'N/A'} • Grade: ${r.overallGrade || 'N/A'} • Scout: ${r.scoutName}</div>
+                            ${r.reportType === 'game' 
+                                ? `<div style="font-size: 12px; color: #7f8c8d; margin-top: 6px;">Type: In-Game • ABs: ${Array.isArray(r.atBats) ? r.atBats.filter(Boolean).length : 0}</div>`
+                                : `<div style="font-size: 12px; color: #7f8c8d; margin-top: 6px;">Type: Showcase • Max EV: ${r.maxEV || 'N/A'} • Max Dist: ${r.maxDist || 'N/A'}</div>`}
                         </div>
                     `).join('');
                 }

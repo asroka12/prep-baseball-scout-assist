@@ -49,10 +49,30 @@ export const connectToDatabase = () => {
         maxEV TEXT,
         maxDist TEXT,
         scoutNotes TEXT,
+        reportType TEXT,
+        gameNotes TEXT,
+        formattedAtBats TEXT,
+        atBatsJson TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Ensure new columns exist for dual-mode support (SQLite migrations-lite)
+    const ensureColumn = (table: string, column: string, type: string) => {
+      db.all(`PRAGMA table_info(${table})`, (err, rows: any[]) => {
+        if (err) return;
+        const exists = rows && rows.some((r) => r.name === column);
+        if (!exists) {
+          db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+        }
+      });
+    };
+
+    ensureColumn('reports', 'reportType', 'TEXT');
+    ensureColumn('reports', 'gameNotes', 'TEXT');
+    ensureColumn('reports', 'formattedAtBats', 'TEXT');
+    ensureColumn('reports', 'atBatsJson', 'TEXT');
 
     db.run(`
       CREATE TABLE IF NOT EXISTS events (
