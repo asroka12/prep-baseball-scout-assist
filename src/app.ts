@@ -197,6 +197,27 @@ app.get('/api/players/search', (req: Request, res: Response) => {
   );
 });
 
+
+// Add player (manual quick add)
+app.post('/api/players', (req: Request, res: Response) => {
+  const { firstName, lastName, school, gradYear, state, height, weight, commitment, batHand, throwHand, position } = req.body;
+
+  if (!firstName || !lastName || !school) {
+    return res.status(400).json({ error: 'firstName, lastName, and school are required' });
+  }
+
+  db.run(
+    `INSERT INTO players (firstName, lastName, school, gradYear, state, height, weight, commitment, batHand, throwHand, position)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [firstName, lastName, school, gradYear || '', state || '', height || '', weight || '', commitment || '', batHand || '', throwHand || '', position || ''],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to add player' });
+      }
+      res.json({ id: this.lastID, message: 'Player added' });
+    }
+  );
+});
 // Export reports as text
 app.post('/api/export-text', (req: Request, res: Response) => {
   const { eventName, eventDate } = req.body;

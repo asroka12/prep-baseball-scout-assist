@@ -727,6 +727,16 @@
             allPlayers: [],
             teams: []
         };
+                function normalizeTeamName(name) {
+                    if (!name) return '';
+                    const cleaned = name.toLowerCase()
+                        .replace(/high school|hs/gi, '')
+                        .replace(/travel|club/gi, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    return cleaned || name.trim();
+                }
+
                 async function initGameSetupUI() {
                     // Prefill scout name from localStorage
                     const savedScout = localStorage.getItem('scoutName');
@@ -741,9 +751,13 @@
                     try {
                         const response = await fetch('/api/players');
                         const players = await response.json();
-                        currentGameData.allPlayers = players;
+                        // Attach normalized team key
+                        currentGameData.allPlayers = (players || []).map(p => ({
+                            ...p,
+                            teamKey: normalizeTeamName(p.school || '')
+                        }));
 
-                        const teamSet = new Set((players || []).map(p => (p.school || '').trim()).filter(Boolean));
+                        const teamSet = new Set(currentGameData.allPlayers.map(p => p.teamKey).filter(Boolean));
                         currentGameData.teams = Array.from(teamSet).sort();
 
                         populateTeamSelectors(currentGameData.teams);
@@ -776,19 +790,20 @@
             const scoutName = document.getElementById('dashboardScoutName').value.trim();
             const eventDate = document.getElementById('dashboardEventDate').value;
             const gradYear = document.getElementById('dashboardGradYear').value;
-            const teamA = document.getElementById('teamSelectA').value;
-            const teamB = document.getElementById('teamSelectB').value;
+            const teamAKey = document.getElementById('teamSelectA').value;
+            const teamBKey = document.getElementById('teamSelectB').value;
 
-            if (!scoutName || !eventDate || !teamA || !teamB) {
+            if (!scoutName || !eventDate || !teamAKey || !teamBKey) {
                 showError('reportError', 'Please fill Scout Name, Date, and both teams');
                 return;
             }
 
             localStorage.setItem('scoutName', scoutName);
 
-            // Auto-generate event name: TeamA vs TeamB (Date)
             const prettyDate = new Date(eventDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            const eventName = `${teamA} vs ${teamB} (${prettyDate})`;
+            const teamALabel = teamAKey;
+            const teamBLabel = teamBKey;
+            const eventName = `${teamALabel} vs ${teamBLabel} (${prettyDate})`;
 
             currentGameData.eventName = eventName;
             currentGameData.scoutName = scoutName;
@@ -801,21 +816,18 @@
                     return;
                 }
 
-                // Filter players by selected teams and optional grad year
-                const filteredA = players.filter(p => (p.school || '') === teamA && (!gradYear || (p.gradYear || '') === gradYear));
-                const filteredB = players.filter(p => (p.school || '') === teamB && (!gradYear || (p.gradYear || '') === gradYear));
+                const filteredA = players.filter(p => p.teamKey === teamAKey && (!gradYear || (p.gradYear || '') === gradYear));
+                const filteredB = players.filter(p => p.teamKey === teamBKey && (!gradYear || (p.gradYear || '') === gradYear));
 
-                // Load existing game data
                 await loadExistingGameData(eventName);
 
-                // Display dashboard grouped by team
                 document.getElementById('gameSetupSection').style.display = 'none';
                 document.getElementById('activeDashboard').style.display = 'block';
                 document.getElementById('gameEventTitle').textContent = eventName;
                 document.getElementById('gameScoutName').textContent = scoutName;
                 document.getElementById('gamePlayerCount').textContent = filteredA.length + filteredB.length;
-                document.getElementById('teamHeaderA').textContent = teamA;
-                document.getElementById('teamHeaderB').textContent = teamB;
+                document.getElementById('teamHeaderA').textContent = teamALabel;
+                document.getElementById('teamHeaderB').textContent = teamBLabel;
 
                 renderRosterListGroup(filteredA, 'A');
                 renderRosterListGroup(filteredB, 'B');
@@ -863,6 +875,82 @@
                     </div>
                 `;
             }).join('');
+
+            // Add quick add-player button at end of list
+            const addBtn = document.createElement('button');
+            addBtn.textContent = '➕ Add Player';
+            addBtn.style.marginTop = '10px';
+            addBtn.style.padding = '10px';
+            addBtn.onclick = () => openAddPlayerModal(group);
+            rosterGrid.appendChild(addBtn);
+        }
+
+        // Add Player Modal logic
+        let currentAddPlayerGroup = 'A';
+        function openAddPlayerModal(group) {
+            currentAddPlayerGroup = group;
+            // Pre-fill school with selected team
+            const teamKey = group === 'A' ? document.getElementById('teamSelectA').value : document.getElementById('teamSelectB').value;
+            document.getElementById('newPlayerSchool').value = teamKey || '';
+            document.getElementById('newPlayerFirst').value = '';
+            document.getElementById('newPlayerLast').value = '';
+            document.getElementById('newPlayerPosition').value = '';
+            document.getElementById('newPlayerGradYear').value = '';
+            document.getElementById('addPlayerModal').classList.add('active');
+        }
+
+        function closeAddPlayerModal() {
+            document.getElementById('addPlayerModal').classList.remove('active');
+        }
+
+        async function saveNewPlayer() {
+            const firstName = document.getElementById('newPlayerFirst').value.trim();
+            const lastName = document.getElementById('newPlayerLast').value.trim();
+            const school = document.getElementById('newPlayerSchool').value.trim();
+            const position = document.getElementById('newPlayerPosition').value.trim();
+            const gradYear = document.getElementById('newPlayerGradYear').value.trim();
+
+            if (!firstName || !lastName || !school) {
+                showError('reportError', 'First, Last, and Team are required');
+                return;
+            }
+
+            const payload = { firstName, lastName, school, position, gradYear };
+
+            try {
+                const resp = await fetch('/api/players', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!resp.ok) throw new Error('Save failed');
+
+                const newPlayer = {
+                    ...payload,
+                    teamKey: normalizeTeamName(school)
+                };
+
+                currentGameData.allPlayers.push(newPlayer);
+                closeAddPlayerModal();
+                refreshRosterAfterAdd();
+                showSuccess('reportSuccess', 'Player added');
+            } catch (e) {
+                showError('reportError', 'Could not add player');
+            }
+        }
+
+        function refreshRosterAfterAdd() {
+            const gradYear = document.getElementById('dashboardGradYear').value;
+            const teamAKey = document.getElementById('teamSelectA').value;
+            const teamBKey = document.getElementById('teamSelectB').value;
+            const players = currentGameData.allPlayers || [];
+            const filteredA = players.filter(p => p.teamKey === teamAKey && (!gradYear || (p.gradYear || '') === gradYear));
+            const filteredB = players.filter(p => p.teamKey === teamBKey && (!gradYear || (p.gradYear || '') === gradYear));
+            document.getElementById('gamePlayerCount').textContent = filteredA.length + filteredB.length;
+            renderRosterListGroup(filteredA, 'A');
+            renderRosterListGroup(filteredB, 'B');
+        }
         }
 
         function calculatePlayerStats(playerName) {
@@ -1265,8 +1353,12 @@ Notes: ${ab.notes || 'None'}`;
 
         async function saveReport() {
             const playerName = document.getElementById('playerName').value;
-            const scoutName = document.getElementById('scoutName').value;
-            const eventDate = document.getElementById('eventDate').value;
+            const scoutName = currentMode === 'game'
+                ? (document.getElementById('dashboardScoutName').value || document.getElementById('scoutName').value)
+                : document.getElementById('scoutName').value;
+            const eventDate = currentMode === 'game'
+                ? (document.getElementById('dashboardEventDate').value || document.getElementById('eventDate').value)
+                : document.getElementById('eventDate').value;
 
             if (!playerName || !scoutName || !eventDate) {
                 showError('reportError', 'Please fill in required fields (*)');
@@ -1713,6 +1805,43 @@ Notes: ${ab.notes || 'None'}`;
                 </div>
 
                 <button onclick="saveAtBat()" style="width: 100%; background: #27ae60; padding: 12px;">💾 Save At-Bat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div id="addPlayerModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Player</h3>
+                <button class="modal-close" onclick="closeAddPlayerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="newPlayerFirst" placeholder="First name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="newPlayerLast" placeholder="Last name" />
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Team / School</label>
+                        <input type="text" id="newPlayerSchool" placeholder="e.g., Burlington" />
+                    </div>
+                    <div class="form-group">
+                        <label>Position</label>
+                        <input type="text" id="newPlayerPosition" placeholder="e.g., SS" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Grad Year</label>
+                    <input type="text" id="newPlayerGradYear" placeholder="e.g., 2026" />
+                </div>
+                <button onclick="saveNewPlayer()" style="width: 100%; background: #27ae60; padding: 12px;">Save Player</button>
             </div>
         </div>
     </div>
