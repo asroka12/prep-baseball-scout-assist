@@ -2017,9 +2017,15 @@ Notes: ${ab.notes || 'None'}`;
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
+            // Unregister all old service workers to clear cache
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(reg => reg.unregister());
+            });
+            
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').then((reg) => {
+                navigator.serviceWorker.register('/service-worker.js?v=' + Date.now()).then((reg) => {
                     console.log('✓ Service Worker registered');
+                    reg.update();
                 }).catch((err) => {
                     console.log('Service Worker registration failed:', err);
                 });
