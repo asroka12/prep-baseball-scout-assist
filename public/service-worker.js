@@ -1,8 +1,9 @@
-const CACHE_NAME = 'scout-app-v2';
+const CACHE_NAME = 'scout-app-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/favicon.ico'
 ];
 
 // Install event - cache essential assets

@@ -6,9 +6,11 @@
     <meta name="theme-color" content="#1e3a8a">
     <meta name="description" content="Real-time scouting reports for prep baseball tournaments">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Scout App">
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232c3e50'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='50' fill='%23ffffff' font-family='Arial, sans-serif'%3ESP%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231e3a8a' width='180' height='180'/><text x='90' y='130' font-size='100' fill='white' text-anchor='middle' font-weight='bold'>⚾</text></svg>">
     <title>Prep Baseball Scout App</title>
     <style>
@@ -459,9 +461,9 @@
         </header>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('upload')">Upload Roster</button>
-            <button class="tab-btn" onclick="switchTab('scout')">Create Report</button>
-            <button class="tab-btn" onclick="switchTab('view')">View Reports</button>
+            <button class="tab-btn active" onclick="switchTab('upload', this)">Upload Roster</button>
+            <button class="tab-btn" onclick="switchTab('scout', this)">Create Report</button>
+            <button class="tab-btn" onclick="switchTab('view', this)">View Reports</button>
         </div>
 
         <!-- Upload Tab -->
@@ -1500,9 +1502,9 @@ Notes: ${ab.notes || 'None'}`;
                 document.getElementById('playerHeight').value = '';
                 document.getElementById('playerWeight').value = '';
                 document.getElementById('playerCommitment').value = '';
-                        // Update star button state
-                        updateStarButtonState();
             }
+
+            updateStarButtonState();
         }
 
         function saveEventInfo() {
@@ -1520,59 +1522,57 @@ Notes: ${ab.notes || 'None'}`;
             if (scoutName) document.getElementById('scoutName').value = scoutName;
         }
 
-        function switchTab(tabName) {
-                    async function loadPlayersForAutocomplete() {
-                        try {
-                            const response = await fetch('/api/players');
-                            const players = await response.json();
-                            currentGameData.allPlayers = (players || []).map(p => ({
-                                ...p,
-                                teamKey: normalizeTeamName(p.school || '')
-                            }));
-                        } catch (error) {
-                            console.error('Error loading players:', error);
-                        }
-                    }
+        async function loadPlayersForAutocomplete() {
+            try {
+                const response = await fetch('/api/players');
+                const players = await response.json();
+                currentGameData.allPlayers = (players || []).map(p => ({
+                    ...p,
+                    teamKey: normalizeTeamName(p.school || '')
+                }));
+            } catch (error) {
+                console.error('Error loading players:', error);
+            }
+        }
 
-                    function toggleStarPlayer() {
-                        const playerName = document.getElementById('playerName').value.trim();
-                        if (!playerName) {
-                            showError('reportError', 'Please select a player first');
-                            return;
-                        }
+        function toggleStarPlayer() {
+            const playerName = document.getElementById('playerName').value.trim();
+            if (!playerName) {
+                showError('reportError', 'Please select a player first');
+                return;
+            }
 
-                        let starredPlayers = JSON.parse(localStorage.getItem('starredPlayers') || '{}');
-                        const starBtn = document.getElementById('starPlayerBtn');
+            let starredPlayers = JSON.parse(localStorage.getItem('starredPlayers') || '{}');
+            const starBtn = document.getElementById('starPlayerBtn');
 
-                        if (starredPlayers[playerName]) {
-                            delete starredPlayers[playerName];
-                            starBtn.textContent = '☆';
-                            starBtn.style.background = '#ecf0f1';
-                        } else {
-                            starredPlayers[playerName] = true;
-                            starBtn.textContent = '★';
-                            starBtn.style.background = '#ffc107';
-                        }
+            if (starredPlayers[playerName]) {
+                delete starredPlayers[playerName];
+                starBtn.textContent = '☆';
+                starBtn.style.background = '#ecf0f1';
+            } else {
+                starredPlayers[playerName] = true;
+                starBtn.textContent = '★';
+                starBtn.style.background = '#ffc107';
+            }
 
-                        localStorage.setItem('starredPlayers', JSON.stringify(starredPlayers));
-                    }
+            localStorage.setItem('starredPlayers', JSON.stringify(starredPlayers));
+        }
 
-                    function updateStarButtonState() {
-                        const playerName = document.getElementById('playerName').value.trim();
-                        const starBtn = document.getElementById('starPlayerBtn');
-                        const starredPlayers = JSON.parse(localStorage.getItem('starredPlayers') || '{}');
+        function updateStarButtonState() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const starBtn = document.getElementById('starPlayerBtn');
+            const starredPlayers = JSON.parse(localStorage.getItem('starredPlayers') || '{}');
 
-                        if (starredPlayers[playerName]) {
-                            starBtn.textContent = '★';
-                            starBtn.style.background = '#ffc107';
-                        } else {
-                            starBtn.textContent = '☆';
-                            starBtn.style.background = '#ecf0f1';
-                        }
-                    }
+            if (starredPlayers[playerName]) {
+                starBtn.textContent = '★';
+                starBtn.style.background = '#ffc107';
+            } else {
+                starBtn.textContent = '☆';
+                starBtn.style.background = '#ecf0f1';
+            }
+        }
 
-                    function switchTab(tabName) {
-            // Hide all tabs
+        function switchTab(tabName, btn) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -1580,9 +1580,11 @@ Notes: ${ab.notes || 'None'}`;
                 btn.classList.remove('active');
             });
 
-            // Show selected tab
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            const tabEl = document.getElementById(tabName);
+            tabEl.classList.add('active');
+            if (btn) {
+                btn.classList.add('active');
+            }
         }
 
         async function uploadCSV() {
