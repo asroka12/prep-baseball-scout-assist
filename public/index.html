@@ -1480,7 +1480,12 @@ Notes: ${ab.notes || 'None'}`;
 
             // Find and populate roster data from CSV
             const player = (currentGameData.allPlayers || []).find(p => `${p.firstName} ${p.lastName}` === name);
+            console.log('selectPlayer - looking for:', name);
+            console.log('selectPlayer - player found:', player);
+            console.log('selectPlayer - allPlayers count:', (currentGameData.allPlayers || []).length);
+            
             if (player) {
+                console.log('Player data:', { gradYear: player.gradYear, state: player.state, height: player.height, weight: player.weight });
                 document.getElementById('playerGradClass').value = player.gradYear || '';
                 document.getElementById('playerState').value = player.state || '';
                 document.getElementById('playerHeight').value = player.height || '';
@@ -1496,6 +1501,7 @@ Notes: ${ab.notes || 'None'}`;
                     }
                 }
             } else {
+                console.log('Player not found in allPlayers');
                 // Clear roster fields if player not found in CSV
                 document.getElementById('playerGradClass').value = '';
                 document.getElementById('playerState').value = '';

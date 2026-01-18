@@ -120,16 +120,19 @@ app.post('/api/reports', (req: Request, res: Response) => {
     eventName,
     scoutName,
     overallGrade,
-    stance,
-    load,
-    swingPath,
-    barrelFeel,
-    batSpeed,
-    avgEV,
-    maxEV,
-    maxDist,
-    scoutNotes,
     reportType,
+    // Showcase fields
+    bodyNotes,
+    hitNotes,
+    hitGrade,
+    powerNotes,
+    powerGrade,
+    fieldNotes,
+    fieldGrade,
+    armNotes,
+    armGrade,
+    scoutNotes,
+    // Game fields
     gameNotes,
     formattedAtBats,
     atBats,
@@ -140,17 +143,16 @@ app.post('/api/reports', (req: Request, res: Response) => {
   db.run(
     `INSERT INTO reports (
       playerName, playerSchool, eventDate, eventName, scoutName, overallGrade,
-      stance, load, swingPath, barrelFeel, batSpeed, avgEV, maxEV, maxDist, scoutNotes,
-      reportType, gameNotes, formattedAtBats, atBatsJson
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      reportType, scoutNotes, gameNotes, formattedAtBats, atBatsJson
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       playerName, playerSchool, eventDate, eventName, scoutName, overallGrade,
-      stance, load, swingPath, barrelFeel, batSpeed, avgEV, maxEV, maxDist, scoutNotes,
-      reportType || 'showcase', gameNotes || null, formattedAtBats || null, atBatsJson
+      reportType || 'showcase', scoutNotes || bodyNotes || '', gameNotes || null, formattedAtBats || null, atBatsJson
     ],
     function (err) {
       if (err) {
-        return res.status(500).json({ error: 'Failed to create report' });
+        console.error('Report insert error:', err);
+        return res.status(500).json({ error: 'Failed to create report', details: err.message });
       }
       res.json({ id: this.lastID, message: 'Report created' });
     }
