@@ -62,21 +62,31 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
       };
 
       for (const player of results) {
+        // Parse Bats/Throws format (e.g., "R/R" -> bat: R, throw: R)
+        const batsThrows = getField(player, 'Bats/Throws', 'batsThrows', 'Bat Hand', 'Throw Hand');
+        let batHand = '';
+        let throwHand = '';
+        if (batsThrows && batsThrows.includes('/')) {
+          const [bat, thr] = batsThrows.split('/').map(s => s.trim());
+          batHand = bat || '';
+          throwHand = thr || '';
+        }
+
         db.run(
           `INSERT INTO players (firstName, lastName, school, gradYear, state, height, weight, commitment, batHand, throwHand, position)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            getField(player, 'First', 'FirstName', 'first name', 'First Name', 'firstName'),
-            getField(player, 'Last', 'LastName', 'last name', 'Last Name', 'lastName'),
-            getField(player, 'School', 'Team', 'school', 'team'),
-            getField(player, 'GradYear', 'Grad Year', 'grad year', 'Year', 'year', 'gradYear'),
+            getField(player, 'First Name', 'First', 'FirstName', 'first name', 'firstName'),
+            getField(player, 'Last Name', 'Last', 'LastName', 'last name', 'lastName'),
+            getField(player, 'High School', 'School', 'Team', 'school', 'team'),
+            getField(player, 'Grad Class', 'GradYear', 'Grad Year', 'grad year', 'Year', 'year', 'gradYear'),
             getField(player, 'State', 'state'),
             getField(player, 'Height', 'height'),
             getField(player, 'Weight', 'weight'),
             getField(player, 'Commitment', 'commitment'),
-            getField(player, 'Bat Hand', 'Bat', 'bat hand', 'batHand'),
-            getField(player, 'Throw Hand', 'Throw', 'throw hand', 'throwHand'),
-            getField(player, 'Position', 'Pos', 'position', 'pos'),
+            batHand || getField(player, 'Bat Hand', 'Bat', 'bat hand', 'batHand'),
+            throwHand || getField(player, 'Throw Hand', 'Throw', 'throw hand', 'throwHand'),
+            getField(player, 'Primary', 'Position', 'Pos', 'position', 'pos'),
           ],
           (err) => {
             if (err) console.error('Insert error:', err);
