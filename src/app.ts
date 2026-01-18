@@ -53,22 +53,30 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
     .pipe(csv())
     .on('data', (data: any) => results.push(data))
     .on('end', () => {
+      // Helper to get value from various column name formats
+      const getField = (obj: any, ...keys: string[]): string => {
+        for (const key of keys) {
+          if (obj[key]) return obj[key].toString().trim();
+        }
+        return '';
+      };
+
       for (const player of results) {
         db.run(
           `INSERT INTO players (firstName, lastName, school, gradYear, state, height, weight, commitment, batHand, throwHand, position)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            player['First'] || '',
-            player['Last'] || '',
-            player['School'] || '',
-            player['GradYear'] || '',
-            player['State'] || '',
-            player['Height'] || '',
-            player['Weight'] || '',
-            player['Commitment'] || '',
-            player['Bat Hand'] || '',
-            player['Throw Hand'] || '',
-            player['Position'] || '',
+            getField(player, 'First', 'FirstName', 'first name', 'First Name', 'firstName'),
+            getField(player, 'Last', 'LastName', 'last name', 'Last Name', 'lastName'),
+            getField(player, 'School', 'Team', 'school', 'team'),
+            getField(player, 'GradYear', 'Grad Year', 'grad year', 'Year', 'year', 'gradYear'),
+            getField(player, 'State', 'state'),
+            getField(player, 'Height', 'height'),
+            getField(player, 'Weight', 'weight'),
+            getField(player, 'Commitment', 'commitment'),
+            getField(player, 'Bat Hand', 'Bat', 'bat hand', 'batHand'),
+            getField(player, 'Throw Hand', 'Throw', 'throw hand', 'throwHand'),
+            getField(player, 'Position', 'Pos', 'position', 'pos'),
           ],
           (err) => {
             if (err) console.error('Insert error:', err);
