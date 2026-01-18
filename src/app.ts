@@ -53,17 +53,24 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
     .pipe(csv())
     .on('data', (data: any) => results.push(data))
     .on('end', () => {
-      // Helper to get value from various column name formats
-      const getField = (obj: any, ...keys: string[]): string => {
-        for (const key of keys) {
-          if (obj[key]) return obj[key].toString().trim();
+      // Flexible column mapper - tries multiple variations case-insensitively
+      const findColumn = (obj: any, ...patterns: string[]): string => {
+        const keys = Object.keys(obj);
+        for (const pattern of patterns) {
+          // Exact match (case-insensitive)
+          const exact = keys.find(k => k.toLowerCase() === pattern.toLowerCase());
+          if (exact && obj[exact]) return obj[exact].toString().trim();
+          
+          // Partial match (contains pattern)
+          const partial = keys.find(k => k.toLowerCase().includes(pattern.toLowerCase()));
+          if (partial && obj[partial]) return obj[partial].toString().trim();
         }
         return '';
       };
 
       for (const player of results) {
         // Parse Bats/Throws format (e.g., "R/R" -> bat: R, throw: R)
-        const batsThrows = getField(player, 'Bats/Throws', 'batsThrows', 'Bat Hand', 'Throw Hand');
+        const batsThrows = findColumn(player, 'bats/throws', 'bats', 'throw');
         let batHand = '';
         let throwHand = '';
         if (batsThrows && batsThrows.includes('/')) {
@@ -76,17 +83,17 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
           `INSERT INTO players (firstName, lastName, school, gradYear, state, height, weight, commitment, batHand, throwHand, position)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            getField(player, 'First Name', 'First', 'FirstName', 'first name', 'firstName'),
-            getField(player, 'Last Name', 'Last', 'LastName', 'last name', 'lastName'),
-            getField(player, 'High School', 'School', 'Team', 'school', 'team'),
-            getField(player, 'Grad Class', 'GradYear', 'Grad Year', 'grad year', 'Year', 'year', 'gradYear'),
-            getField(player, 'State', 'state'),
-            getField(player, 'Height', 'height'),
-            getField(player, 'Weight', 'weight'),
-            getField(player, 'Commitment', 'commitment'),
-            batHand || getField(player, 'Bat Hand', 'Bat', 'bat hand', 'batHand'),
-            throwHand || getField(player, 'Throw Hand', 'Throw', 'throw hand', 'throwHand'),
-            getField(player, 'Primary', 'Position', 'Pos', 'position', 'pos'),
+            findColumn(player, 'first name', 'first', 'firstname'),
+            findColumn(player, 'last name', 'last', 'lastname'),
+            findColumn(player, 'high school', 'school', 'team'),
+            findColumn(player, 'grad class', 'grad year', 'grad', 'year'),
+            findColumn(player, 'state'),
+            findColumn(player, 'height'),
+            findColumn(player, 'weight'),
+            findColumn(player, 'commitment'),
+            batHand || findColumn(player, 'bat hand', 'bat'),
+            throwHand || findColumn(player, 'throw hand', 'throw'),
+            findColumn(player, 'primary', 'position', 'pos'),
           ],
           (err) => {
             if (err) console.error('Insert error:', err);
