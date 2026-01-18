@@ -510,14 +510,21 @@
 
                 <!-- Player Info -->
                 <div class="section-title">Player Information</div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label for="playerName">Player Name *</label>
-                        <div class="player-input-wrapper">
-                            <input type="text" id="playerName" placeholder="Start typing player name..." autocomplete="off" />
-                            <div id="playerAutocomplete" class="autocomplete-list"></div>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <div class="form-group">
+                            <label for="playerName">Player Name *</label>
+                            <div class="player-input-wrapper">
+                                <input type="text" id="playerName" placeholder="Start typing player name..." autocomplete="off" />
+                                <div id="playerAutocomplete" class="autocomplete-list"></div>
+                            </div>
                         </div>
                     </div>
+                    <div style="width: 50px; display: flex; align-items: flex-end;">
+                        <button type="button" id="starPlayerBtn" onclick="toggleStarPlayer()" style="width: 100%; padding: 10px; background: #ecf0f1; border: 2px solid #bdc3c7; border-radius: 6px; font-size: 20px; cursor: pointer; text-align: center;">☆</button>
+                    </div>
+                </div>
+                <div class="grid-2">
                     <div class="form-group">
                         <label for="playerSchool">School</label>
                         <input type="text" id="playerSchool" placeholder="High school name" />
@@ -750,22 +757,6 @@
                         <textarea id="armNotes" class="phrase-textarea" placeholder="Arm observations..."></textarea>
                     </div>
 
-                    <!-- Metrics -->
-                    <div class="section-title">Exit Velo & Metrics</div>
-                    <div class="grid-3">
-                        <div class="form-group">
-                            <label for="avgEV">Avg Exit Velo (mph)</label>
-                            <input type="number" id="avgEV" placeholder="e.g., 82" />
-                        </div>
-                        <div class="form-group">
-                            <label for="maxEV">Max Exit Velo (mph)</label>
-                            <input type="number" id="maxEV" placeholder="e.g., 92" />
-                        </div>
-                        <div class="form-group">
-                            <label for="maxDist">Max Distance (ft)</label>
-                            <input type="number" id="maxDist" placeholder="e.g., 385" />
-                        </div>
-                    </div>
 
                     <!-- General Notes -->
                     <div class="section-title">General Scout Notes</div>
@@ -1509,6 +1500,8 @@ Notes: ${ab.notes || 'None'}`;
                 document.getElementById('playerHeight').value = '';
                 document.getElementById('playerWeight').value = '';
                 document.getElementById('playerCommitment').value = '';
+                        // Update star button state
+                        updateStarButtonState();
             }
         }
 
@@ -1528,6 +1521,57 @@ Notes: ${ab.notes || 'None'}`;
         }
 
         function switchTab(tabName) {
+                    async function loadPlayersForAutocomplete() {
+                        try {
+                            const response = await fetch('/api/players');
+                            const players = await response.json();
+                            currentGameData.allPlayers = (players || []).map(p => ({
+                                ...p,
+                                teamKey: normalizeTeamName(p.school || '')
+                            }));
+                        } catch (error) {
+                            console.error('Error loading players:', error);
+                        }
+                    }
+
+                    function toggleStarPlayer() {
+                        const playerName = document.getElementById('playerName').value.trim();
+                        if (!playerName) {
+                            showError('reportError', 'Please select a player first');
+                            return;
+                        }
+
+                        let starredPlayers = JSON.parse(localStorage.getItem('starredPlayers') || '{}');
+                        const starBtn = document.getElementById('starPlayerBtn');
+
+                        if (starredPlayers[playerName]) {
+                            delete starredPlayers[playerName];
+                            starBtn.textContent = '☆';
+                            starBtn.style.background = '#ecf0f1';
+                        } else {
+                            starredPlayers[playerName] = true;
+                            starBtn.textContent = '★';
+                            starBtn.style.background = '#ffc107';
+                        }
+
+                        localStorage.setItem('starredPlayers', JSON.stringify(starredPlayers));
+                    }
+
+                    function updateStarButtonState() {
+                        const playerName = document.getElementById('playerName').value.trim();
+                        const starBtn = document.getElementById('starPlayerBtn');
+                        const starredPlayers = JSON.parse(localStorage.getItem('starredPlayers') || '{}');
+
+                        if (starredPlayers[playerName]) {
+                            starBtn.textContent = '★';
+                            starBtn.style.background = '#ffc107';
+                        } else {
+                            starBtn.textContent = '☆';
+                            starBtn.style.background = '#ecf0f1';
+                        }
+                    }
+
+                    function switchTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -1624,9 +1668,6 @@ Notes: ${ab.notes || 'None'}`;
                 report.fieldGrade = document.getElementById('fieldGrade').value;
                 report.armNotes = document.getElementById('armNotes').value;
                 report.armGrade = document.getElementById('armGrade').value;
-                report.avgEV = document.getElementById('avgEV').value;
-                report.maxEV = document.getElementById('maxEV').value;
-                report.maxDist = document.getElementById('maxDist').value;
                 report.scoutNotes = document.getElementById('scoutNotes').value;
             } else {
                 report.atBats = atBatsData;
@@ -1694,10 +1735,6 @@ Notes: ${ab.notes || 'None'}`;
             document.getElementById('fieldGrade').value = '';
             document.getElementById('armGrade').value = '';
             
-            // Clear metrics
-            document.getElementById('avgEV').value = '';
-            document.getElementById('maxEV').value = '';
-            document.getElementById('maxDist').value = '';
             document.getElementById('scoutNotes').value = '';
             
             // Clear all active pill buttons
@@ -1844,6 +1881,7 @@ Notes: ${ab.notes || 'None'}`;
         window.addEventListener('load', () => {
             loadEventInfo();
             loadEvents();
+                        loadPlayersForAutocomplete();
             loadReports();
             updateDraftsUI();
             // Try to sync every 30 seconds if online
