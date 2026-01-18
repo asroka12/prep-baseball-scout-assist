@@ -1039,7 +1039,7 @@
             }
         });
 
-        async function saveAtBat() {
+        async function saveAtBat(stayOpen = false) {
             if (!currentModalPlayer) return;
 
             // Gather form data
@@ -1053,21 +1053,33 @@
                 return;
             }
 
-            // Add to player's at-bats
             if (!currentGameData.playerAtBats[currentModalPlayer]) {
                 currentGameData.playerAtBats[currentModalPlayer] = [];
             }
-            currentGameData.playerAtBats[currentModalPlayer].push({...modalAtBatData});
+            currentGameData.playerAtBats[currentModalPlayer].push({ ...modalAtBatData });
 
-            // Save to backend
             await saveGameDataToBackend(currentModalPlayer);
 
-            // Reload roster to show updated stats
-            const response = await fetch('/api/players');
-            const players = await response.json();
-            renderRosterList(players);
+            // Refresh roster stats using current filters
+            refreshRosterAfterAdd();
 
-            // Close modal
+            if (stayOpen) {
+                const atBats = currentGameData.playerAtBats[currentModalPlayer] || [];
+                if (atBats.length > 0) {
+                    document.getElementById('atBatHistory').style.display = 'block';
+                    document.getElementById('atBatHistoryList').innerHTML = atBats.map((ab, idx) => `
+                    <div class="at-bat-history-item">
+                        <strong>AB #${idx + 1}:</strong> Inning ${ab.inning} • ${ab.result || 'N/A'} • ${ab.contactQuality || 'N/A'} contact
+                        ${ab.notes ? '<br><span style="font-size: 12px; color: #7f8c8d;">' + ab.notes + '</span>' : ''}
+                    </div>
+                `).join('');
+                }
+                clearModalForm();
+                document.getElementById('modalInning').focus();
+                showSuccess('reportSuccess', `At-bat saved for ${currentModalPlayer}!`);
+                return;
+            }
+
             closeAtBatModal();
             showSuccess('reportSuccess', `At-bat saved for ${currentModalPlayer}!`);
         }
@@ -1352,16 +1364,31 @@ Notes: ${ab.notes || 'None'}`;
 
         async function saveReport() {
             const playerName = document.getElementById('playerName').value;
-            const scoutName = currentMode === 'game'
-                ? (document.getElementById('dashboardScoutName').value || document.getElementById('scoutName').value)
-                : document.getElementById('scoutName').value;
-            const eventDate = currentMode === 'game'
-                ? (document.getElementById('dashboardEventDate').value || document.getElementById('eventDate').value)
-                : document.getElementById('eventDate').value;
+            const baseScoutName = document.getElementById('scoutName').value;
+            const baseEventDate = document.getElementById('eventDate').value;
+            const gameScoutName = document.getElementById('dashboardScoutName').value;
+            const gameEventDate = document.getElementById('dashboardEventDate').value;
 
-            if (!playerName || !scoutName || !eventDate) {
-                showError('reportError', 'Please fill in required fields (*)');
-                return;
+            let scoutName = currentMode === 'game'
+                ? (gameScoutName || baseScoutName || '')
+                : baseScoutName;
+            let eventDate = currentMode === 'game'
+                ? (gameEventDate || baseEventDate || '')
+                : baseEventDate;
+
+            if (currentMode === 'showcase') {
+                if (!playerName || !scoutName || !eventDate) {
+                    showError('reportError', 'Please fill in required fields (*)');
+                    return;
+                }
+            } else {
+                if (!playerName) {
+                    showError('reportError', 'Please enter a player name');
+                    return;
+                }
+                const today = new Date().toISOString().split('T')[0];
+                eventDate = eventDate || today;
+                scoutName = scoutName || 'Unknown';
             }
 
             const report = {
@@ -1803,7 +1830,10 @@ Notes: ${ab.notes || 'None'}`;
                     <textarea id="modalNotes" placeholder="Notes about this at-bat..."></textarea>
                 </div>
 
-                <button onclick="saveAtBat()" style="width: 100%; background: #27ae60; padding: 12px;">💾 Save At-Bat</button>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="saveAtBat()" style="flex: 1; background: #27ae60; padding: 12px;">💾 Save & Close</button>
+                    <button onclick="saveAtBat(true)" style="flex: 1; background: #2980b9; padding: 12px;">➕ Save & Add Next</button>
+                </div>
             </div>
         </div>
     </div>
