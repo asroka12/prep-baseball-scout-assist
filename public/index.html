@@ -238,6 +238,24 @@
             flex-wrap: wrap;
         }
 
+        .grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 1200px) {
+            .grid-5 {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-5 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         .pill-btn {
             padding: 8px 16px;
             background: #ecf0f1;
@@ -506,47 +524,49 @@
                     </div>
                 </div>
 
+                <!-- Roster Data (Auto-filled from CSV) -->
+                <div class="grid-5" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <div class="form-group">
+                        <label>Grad Class</label>
+                        <input type="text" id="playerGradClass" readonly style="background: #ecf0f1; color: #7f8c8d;" />
+                    </div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <input type="text" id="playerState" readonly style="background: #ecf0f1; color: #7f8c8d;" />
+                    </div>
+                    <div class="form-group">
+                        <label>Height</label>
+                        <input type="text" id="playerHeight" readonly style="background: #ecf0f1; color: #7f8c8d;" />
+                    </div>
+                    <div class="form-group">
+                        <label>Weight</label>
+                        <input type="text" id="playerWeight" readonly style="background: #ecf0f1; color: #7f8c8d;" />
+                    </div>
+                    <div class="form-group">
+                        <label>Commitment</label>
+                        <input type="text" id="playerCommitment" readonly style="background: #ecf0f1; color: #7f8c8d;" />
+                    </div>
+                </div>
+
                 <!-- Event Info -->
                 <div class="section-title">Event Information</div>
                 <div class="grid-3">
                     <div class="form-group">
                         <label for="eventDate">Event Date *</label>
-                        <input type="text" id="eventDate" placeholder="e.g., 2026-01-16" />
+                        <input type="date" id="eventDate" onchange="saveEventInfo()" />
                     </div>
                     <div class="form-group">
                         <label for="eventName">Event Name</label>
-                        <input type="text" id="eventName" placeholder="e.g., Winter Showcase" />
+                        <input type="text" id="eventName" placeholder="e.g., Winter Showcase" onchange="saveEventInfo()" />
                     </div>
                     <div class="form-group">
                         <label for="scoutName">Scout Name *</label>
-                        <input type="text" id="scoutName" placeholder="Your name" />
+                        <input type="text" id="scoutName" placeholder="Your name" onchange="saveEventInfo()" />
                     </div>
                 </div>
 
                 <!-- SHOWCASE MODE FIELDS -->
                 <div id="showcaseFields">
-                    <!-- Overall Grade -->
-                    <div class="section-title">Overall Grade</div>
-                    <div class="grid-3">
-                        <div class="form-group">
-                            <label for="overallGrade">Overall Grade (1-10) *</label>
-                            <select id="overallGrade">
-                                <option value="">Select grade...</option>
-                                <option value="10">10 - Elite/80</option>
-                                <option value="9">9 - Draft/Early DI Impact</option>
-                                <option value="8">8 - DI Competitive</option>
-                                <option value="7">7 - College Capable</option>
-                                <option value="6.5">6.5 - Tweener/Above Avg HS</option>
-                                <option value="6">6 - Tweener/Above Avg HS</option>
-                                <option value="5">5 - Avg HS Starter</option>
-                                <option value="4">4 - Below Avg HS</option>
-                                <option value="3">3 - JV Level</option>
-                                <option value="2">2 - Non-Competitive</option>
-                                <option value="1">1 - Non-Prospect</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <!-- BODY Section (Blue) -->
                     <div class="phrase-section" style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #2196f3;">
                         <div class="section-title" style="color: #1976d2; margin-top: 0;">💪 BODY</div>
@@ -566,7 +586,28 @@
 
                     <!-- HIT Section (Red) -->
                     <div class="phrase-section" style="background: #ffebee; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #f44336;">
-                        <div class="section-title" style="color: #c62828; margin-top: 0;">🎯 HIT (Rhythm & Mechanics)</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="section-title" style="color: #c62828; margin: 0;">🎯 HIT (Rhythm & Mechanics)</div>
+                            <div style="min-width: 200px;">
+                                <label style="font-size: 13px; font-weight: 600; color: #c62828;">Hit Grade</label>
+                                <select id="hitGrade" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="">--</option>
+                                    <option value="80">80</option>
+                                    <option value="75">75</option>
+                                    <option value="70">70</option>
+                                    <option value="65">65</option>
+                                    <option value="60">60</option>
+                                    <option value="55">55</option>
+                                    <option value="50">50</option>
+                                    <option value="45">45</option>
+                                    <option value="40">40</option>
+                                    <option value="35">35</option>
+                                    <option value="30">30</option>
+                                    <option value="25">25</option>
+                                    <option value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
                         
                         <!-- Setup/Mechanics Group -->
                         <div style="margin-bottom: 15px;">
@@ -604,7 +645,28 @@
 
                     <!-- POWER Section (Orange) -->
                     <div class="phrase-section" style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #ff9800;">
-                        <div class="section-title" style="color: #e65100; margin-top: 0;">⚡ POWER (Approach & Result)</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="section-title" style="color: #e65100; margin: 0;">⚡ POWER (Approach & Result)</div>
+                            <div style="min-width: 200px;">
+                                <label style="font-size: 13px; font-weight: 600; color: #e65100;">Power Grade</label>
+                                <select id="powerGrade" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="">--</option>
+                                    <option value="80">80</option>
+                                    <option value="75">75</option>
+                                    <option value="70">70</option>
+                                    <option value="65">65</option>
+                                    <option value="60">60</option>
+                                    <option value="55">55</option>
+                                    <option value="50">50</option>
+                                    <option value="45">45</option>
+                                    <option value="40">40</option>
+                                    <option value="35">35</option>
+                                    <option value="30">30</option>
+                                    <option value="25">25</option>
+                                    <option value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="pill-group" style="margin-bottom: 12px;">
                             <button type="button" class="pill-btn phrase-pill" style="background: #ff9800;" onclick="togglePhrase('power', 'All Fields', this)">All Fields</button>
                             <button type="button" class="pill-btn phrase-pill" style="background: #ff9800;" onclick="togglePhrase('power', 'Pull-Side', this)">Pull-Side</button>
@@ -616,7 +678,28 @@
 
                     <!-- FIELD Section (Green) -->
                     <div class="phrase-section" style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #4caf50;">
-                        <div class="section-title" style="color: #2e7d32; margin-top: 0;">🧤 FIELD (Defense Actions)</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="section-title" style="color: #2e7d32; margin: 0;">🧤 FIELD (Defense Actions)</div>
+                            <div style="min-width: 200px;">
+                                <label style="font-size: 13px; font-weight: 600; color: #2e7d32;">Field Grade</label>
+                                <select id="fieldGrade" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="">--</option>
+                                    <option value="80">80</option>
+                                    <option value="75">75</option>
+                                    <option value="70">70</option>
+                                    <option value="65">65</option>
+                                    <option value="60">60</option>
+                                    <option value="55">55</option>
+                                    <option value="50">50</option>
+                                    <option value="45">45</option>
+                                    <option value="40">40</option>
+                                    <option value="35">35</option>
+                                    <option value="30">30</option>
+                                    <option value="25">25</option>
+                                    <option value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="pill-group" style="margin-bottom: 12px;">
                             <button type="button" class="pill-btn phrase-pill" style="background: #4caf50;" onclick="togglePhrase('field', 'Soft Hands', this)">Soft Hands</button>
                             <button type="button" class="pill-btn phrase-pill" style="background: #4caf50;" onclick="togglePhrase('field', 'Quick Glove-to-Hand', this)">Quick Glove-to-Hand</button>
@@ -632,7 +715,28 @@
 
                     <!-- ARM Section (Purple) -->
                     <div class="phrase-section" style="background: #f3e5f5; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #9c27b0;">
-                        <div class="section-title" style="color: #6a1b9a; margin-top: 0;">💪 ARM (Throwing)</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="section-title" style="color: #6a1b9a; margin: 0;">💪 ARM (Throwing)</div>
+                            <div style="min-width: 200px;">
+                                <label style="font-size: 13px; font-weight: 600; color: #6a1b9a;">Arm Grade</label>
+                                <select id="armGrade" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option value="">--</option>
+                                    <option value="80">80</option>
+                                    <option value="75">75</option>
+                                    <option value="70">70</option>
+                                    <option value="65">65</option>
+                                    <option value="60">60</option>
+                                    <option value="55">55</option>
+                                    <option value="50">50</option>
+                                    <option value="45">45</option>
+                                    <option value="40">40</option>
+                                    <option value="35">35</option>
+                                    <option value="30">30</option>
+                                    <option value="25">25</option>
+                                    <option value="20">20</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="pill-group" style="margin-bottom: 12px;">
                             <button type="button" class="pill-btn phrase-pill" style="background: #9c27b0;" onclick="togglePhrase('arm', 'Athletic', this)">Athletic</button>
                             <button type="button" class="pill-btn phrase-pill" style="background: #9c27b0;" onclick="togglePhrase('arm', 'Accurate', this)">Accurate</button>
@@ -1376,9 +1480,51 @@ Notes: ${ab.notes || 'None'}`;
         });
 
         function selectPlayer(name, school) {
+            // Fill basic info
             document.getElementById('playerName').value = name;
             document.getElementById('playerSchool').value = school;
             playerAutocompleteList.classList.remove('active');
+
+            // Find and populate roster data from CSV
+            const player = (currentGameData.allPlayers || []).find(p => `${p.firstName} ${p.lastName}` === name);
+            if (player) {
+                document.getElementById('playerGradClass').value = player.gradYear || '';
+                document.getElementById('playerState').value = player.state || '';
+                document.getElementById('playerHeight').value = player.height || '';
+                document.getElementById('playerWeight').value = player.weight || '';
+                document.getElementById('playerCommitment').value = player.commitment || '';
+
+                // Auto-fill Body Notes if height/weight exist
+                if (player.height && player.weight) {
+                    const bodyNotesEl = document.getElementById('bodyNotes');
+                    if (!bodyNotesEl.value.trim()) {
+                        bodyNotesEl.value = `${player.height}, ${player.weight}-pounds. `;
+                        bodyNotesEl.focus();
+                    }
+                }
+            } else {
+                // Clear roster fields if player not found in CSV
+                document.getElementById('playerGradClass').value = '';
+                document.getElementById('playerState').value = '';
+                document.getElementById('playerHeight').value = '';
+                document.getElementById('playerWeight').value = '';
+                document.getElementById('playerCommitment').value = '';
+            }
+        }
+
+        function saveEventInfo() {
+            localStorage.setItem('eventDate', document.getElementById('eventDate').value);
+            localStorage.setItem('eventName', document.getElementById('eventName').value);
+            localStorage.setItem('scoutName', document.getElementById('scoutName').value);
+        }
+
+        function loadEventInfo() {
+            const eventDate = localStorage.getItem('eventDate');
+            const eventName = localStorage.getItem('eventName');
+            const scoutName = localStorage.getItem('scoutName');
+            if (eventDate) document.getElementById('eventDate').value = eventDate;
+            if (eventName) document.getElementById('eventName').value = eventName;
+            if (scoutName) document.getElementById('scoutName').value = scoutName;
         }
 
         function switchTab(tabName) {
@@ -1471,9 +1617,13 @@ Notes: ${ab.notes || 'None'}`;
             if (currentMode === 'showcase') {
                 report.bodyNotes = document.getElementById('bodyNotes').value;
                 report.hitNotes = document.getElementById('hitNotes').value;
+                report.hitGrade = document.getElementById('hitGrade').value;
                 report.powerNotes = document.getElementById('powerNotes').value;
+                report.powerGrade = document.getElementById('powerGrade').value;
                 report.fieldNotes = document.getElementById('fieldNotes').value;
+                report.fieldGrade = document.getElementById('fieldGrade').value;
                 report.armNotes = document.getElementById('armNotes').value;
+                report.armGrade = document.getElementById('armGrade').value;
                 report.avgEV = document.getElementById('avgEV').value;
                 report.maxEV = document.getElementById('maxEV').value;
                 report.maxDist = document.getElementById('maxDist').value;
@@ -1523,10 +1673,13 @@ Notes: ${ab.notes || 'None'}`;
         function clearReportForm() {
             document.getElementById('playerName').value = '';
             document.getElementById('playerSchool').value = '';
-            document.getElementById('eventDate').value = '';
-            document.getElementById('eventName').value = '';
-            document.getElementById('scoutName').value = '';
-            document.getElementById('overallGrade').value = '';
+            
+            // Clear roster fields
+            document.getElementById('playerGradClass').value = '';
+            document.getElementById('playerState').value = '';
+            document.getElementById('playerHeight').value = '';
+            document.getElementById('playerWeight').value = '';
+            document.getElementById('playerCommitment').value = '';
             
             // Clear phrase bank textareas
             document.getElementById('bodyNotes').value = '';
@@ -1534,6 +1687,12 @@ Notes: ${ab.notes || 'None'}`;
             document.getElementById('powerNotes').value = '';
             document.getElementById('fieldNotes').value = '';
             document.getElementById('armNotes').value = '';
+            
+            // Clear grade dropdowns
+            document.getElementById('hitGrade').value = '';
+            document.getElementById('powerGrade').value = '';
+            document.getElementById('fieldGrade').value = '';
+            document.getElementById('armGrade').value = '';
             
             // Clear metrics
             document.getElementById('avgEV').value = '';
@@ -1683,6 +1842,7 @@ Notes: ${ab.notes || 'None'}`;
 
         // Check drafts on page load and periodically
         window.addEventListener('load', () => {
+            loadEventInfo();
             loadEvents();
             loadReports();
             updateDraftsUI();
