@@ -1886,10 +1886,10 @@ Notes: ${ab.notes || 'None'}`;
         });
 
         // Check drafts on page load and periodically
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             loadEventInfo();
+            await loadPlayersForAutocomplete();
             loadEvents();
-                        loadPlayersForAutocomplete();
             loadReports();
             updateDraftsUI();
             // Try to sync every 30 seconds if online
